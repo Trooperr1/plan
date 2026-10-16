@@ -1,15 +1,14 @@
-/* "My Day" — the daily planner dashboard. */
+/* "My Day" — today's tasks and schedule. */
 (function () {
   const App = window.App;
   const U = App.util;
   const S = App.sched;
   const C = App.c;
   const icon = (n, s) => App.icon(n, s);
-  const MOODS = [['awful', '😞'], ['meh', '😐'], ['okay', '🙂'], ['good', '😄'], ['great', '🤩']];
 
   const view = { title: 'My Day', date: null };
 
-  /* "Call mom at 5pm #personal !high" → title + time + category + priority */
+  /* "Call mom at 5pm" → title + time. Also understands #category and !high. */
   function parseQuick(text) {
     const cats = App.store.state.categories;
     let time = null;
@@ -46,7 +45,7 @@
   function schedule(key, isToday) {
     const items = S.agenda(key);
     if (!items.length) {
-      return C.empty('calendar', 'Nothing scheduled', 'Add an event or give a task a time to see it here.',
+      return C.empty('calendar', 'Nothing scheduled', '',
         `<button class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}Add event</button>`);
     }
     const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
@@ -69,7 +68,7 @@
             <div class="agenda-bar"></div>
             <div class="agenda-body">
               <strong>${U.esc(e.title)}</strong>
-              <span>${[e.location && U.esc(e.location), U.esc(cat.name), live && '<b class="live-tag">Happening now</b>'].filter(Boolean).join(' · ')}</span>
+              <span>${[e.location && U.esc(e.location), live && '<b class="live-tag">Now</b>'].filter(Boolean).join(' · ')}</span>
             </div>
           </li>`);
       } else {
@@ -81,7 +80,7 @@
             <div class="agenda-bar"></div>
             <div class="agenda-body" data-action="edit-task" data-id="${t.id}" role="button" tabindex="0">
               <strong>${U.esc(t.title)}</strong>
-              <span>Task · ${U.esc(cat.name)}${done ? ' · Done' : ''}</span>
+              <span>Task${done ? ' · Done' : ''}</span>
             </div>
             <button type="button" class="check sm ${done ? 'on' : ''}" data-action="toggle-task" data-id="${t.id}" data-date="${key}" aria-label="Toggle done" aria-pressed="${done}">${icon('check', 12)}</button>
           </li>`);
@@ -91,15 +90,23 @@
     return `<ol class="agenda">${rows.join('')}</ol>`;
   }
 
-  function reminders() {
-    const list = App.reminders.upcoming(48).slice(0, 6);
-    if (!list.length) return C.empty('bell', 'No upcoming reminders', 'Add a time and a reminder to a task or event.');
-    return `<ul class="reminder-list">${list.map((r) => `
-      <li data-action="${r.kind === 'task' ? 'edit-task' : 'edit-event'}" data-id="${r.item.id}" role="button" tabindex="0">
-        <span class="rem-icon">${icon('bell', 15)}</span>
-        <div><strong>${U.esc(r.item.title)}</strong><span>${U.esc(App.reminders.describe(r))}</span></div>
-        <time>${new Date(r.fireAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: App.store.state.settings.clock !== '24' })}</time>
-      </li>`).join('')}</ul>`;
+  function habits(key) {
+    const st = App.store.state;
+    if (!st.settings.showHabits) return '';
+    return `
+      <section class="card">
+        <div class="card-head">
+          <h3>${icon('flame')} Habits</h3>
+          <a class="btn ghost sm" href="#/habits">View all</a>
+        </div>
+        ${st.habits.length ? `<div class="habit-chips">${st.habits.map((h) => {
+          const on = S.habitDone(h, key);
+          const streak = S.streak(h);
+          return `<button type="button" class="habit-chip ${on ? 'on' : ''}" style="--c:${U.esc(h.color)}" data-action="toggle-habit" data-id="${h.id}" data-date="${key}" aria-pressed="${on}">
+            <span class="emoji">${U.esc(h.icon)}</span><span class="name">${U.esc(h.name)}</span>
+            ${streak ? `<span class="streak">🔥${streak}</span>` : ''}<span class="tick">${icon('check', 12)}</span></button>`;
+        }).join('')}</div>` : C.empty('flame', 'No habits yet', '', `<button class="btn ghost sm" data-action="new-habit">${icon('plus', 14)}Add habit</button>`)}
+      </section>`;
   }
 
   view.render = function () {
@@ -109,18 +116,14 @@
     const isToday = key === today;
     const tasks = S.tasksOn(key);
     const late = isToday ? S.overdue(today) : [];
-    const events = S.eventsOn(key);
     const done = tasks.filter((t) => S.isDone(t, key)).length;
     const pct = tasks.length ? (done / tasks.length) * 100 : 0;
-    const day = st.days[key] || {};
-    const habitsDone = st.habits.filter((h) => S.habitDone(h, key)).length;
     const name = st.settings.name ? `, ${U.esc(st.settings.name)}` : '';
     const heading = isToday ? `${U.greeting()}${name}` : U.relDay(key);
-    const remaining = tasks.length - done;
 
     const taskList = tasks.length
       ? tasks.map((t) => C.taskItem(t, key, { showSubs: true })).join('')
-      : C.empty('check', isToday ? 'No tasks for today' : 'No tasks for this day', 'Type below to add your first task.');
+      : C.empty('check', 'No tasks yet', 'Type a task below and press Add.');
 
     return `
       <div class="today">
@@ -130,33 +133,18 @@
               <button type="button" class="icon-btn" data-action="day-prev" aria-label="Previous day">${icon('left')}</button>
               <button type="button" class="btn ghost sm" data-action="day-today" ${isToday ? 'disabled' : ''}>Today</button>
               <button type="button" class="icon-btn" data-action="day-next" aria-label="Next day">${icon('right')}</button>
-              <label class="date-jump" title="Jump to date">${icon('calendar', 16)}<input type="date" id="dayJump" value="${key}" aria-label="Jump to date"></label>
+              <label class="date-jump" title="Pick a date">${icon('calendar', 16)}<input type="date" id="dayJump" value="${key}" aria-label="Pick a date"></label>
             </div>
             <h2>${heading}</h2>
             <p class="muted">${U.fmtDate(key, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-            <label class="focus-input">
-              <span>${icon('target', 16)} Main focus</span>
-              <input type="text" id="dayFocus" maxlength="140" value="${U.esc(day.focus || '')}" placeholder="What is the one thing that matters most ${isToday ? 'today' : 'this day'}?" autocomplete="off">
-            </label>
           </div>
-          <div class="hero-stats">
-            ${C.progressRing(pct, 96, `${done}/${tasks.length} done`)}
-            <ul class="stat-list">
-              <li><strong>${remaining}</strong><span>tasks left</span></li>
-              <li><strong>${events.length}</strong><span>events</span></li>
-              <li><strong>${habitsDone}/${st.habits.length}</strong><span>habits</span></li>
-              ${late.length ? `<li class="danger"><strong>${late.length}</strong><span>overdue</span></li>` : ''}
-            </ul>
-          </div>
+          ${tasks.length ? `<div class="hero-stats">${C.progressRing(pct, 88, `${done} of ${tasks.length}`)}</div>` : ''}
         </section>
 
         <div class="today-cols">
           <div class="col">
             <section class="card">
-              <div class="card-head">
-                <h3>${icon('list')} Tasks</h3>
-                <button type="button" class="btn ghost sm" data-action="new-task" data-date="${key}">${icon('plus', 14)}Add</button>
-              </div>
+              <div class="card-head"><h3>${icon('list')} Tasks</h3></div>
               ${late.length ? `
                 <div class="group-label danger">${icon('alert', 14)} Overdue <span>${late.length}</span></div>
                 <div class="task-list">${late.map((t) => C.taskItem(t, t.date, { showDate: true })).join('')}</div>
@@ -164,18 +152,9 @@
               <div class="task-list">${taskList}</div>
               <form class="quick-add" data-quick>
                 <span>${icon('plus', 16)}</span>
-                <input type="text" id="quickAdd" placeholder="Add a task… try “Gym at 6pm #health !high”" autocomplete="off" aria-label="Quick add task">
+                <input type="text" id="quickAdd" placeholder="Add a task…" autocomplete="off" aria-label="Add a task">
                 <button type="submit" class="btn primary sm">Add</button>
               </form>
-            </section>
-
-            <section class="card">
-              <div class="card-head"><h3>${icon('note')} Notes & reflection</h3><span class="muted sm" id="notesSaved"></span></div>
-              <div class="mood" role="group" aria-label="How was your day?">
-                <span class="muted sm">Mood</span>
-                ${MOODS.map(([m, e]) => `<button type="button" class="mood-btn ${day.mood === m ? 'on' : ''}" data-action="mood" data-mood="${m}" aria-pressed="${day.mood === m}" title="${m}">${e}</button>`).join('')}
-              </div>
-              <textarea id="dayNotes" rows="5" placeholder="Thoughts, wins, lessons, gratitude…">${U.esc(day.notes || '')}</textarea>
             </section>
           </div>
 
@@ -187,64 +166,20 @@
               </div>
               ${schedule(key, isToday)}
             </section>
-
-            <section class="card">
-              <div class="card-head">
-                <h3>${icon('flame')} Habits</h3>
-                <a class="btn ghost sm" href="#/habits">View all</a>
-              </div>
-              ${st.habits.length ? `<div class="habit-chips">${st.habits.map((h) => {
-                const on = S.habitDone(h, key);
-                const streak = S.streak(h);
-                return `<button type="button" class="habit-chip ${on ? 'on' : ''}" style="--c:${U.esc(h.color)}" data-action="toggle-habit" data-id="${h.id}" data-date="${key}" aria-pressed="${on}">
-                  <span class="emoji">${U.esc(h.icon)}</span><span class="name">${U.esc(h.name)}</span>
-                  ${streak ? `<span class="streak">🔥${streak}</span>` : ''}<span class="tick">${icon('check', 12)}</span></button>`;
-              }).join('')}</div>` : C.empty('flame', 'No habits yet', 'Build routines that stick.', `<button class="btn ghost sm" data-action="new-habit">${icon('plus', 14)}Add habit</button>`)}
-            </section>
-
-            <section class="card">
-              <div class="card-head"><h3>${icon('bell')} Upcoming reminders</h3></div>
-              ${reminders()}
-            </section>
+            ${habits(key)}
           </div>
         </div>
       </div>`;
   };
 
-  const saveNotes = U.debounce(() => {
-    App.store.save({ silent: true });
-    const el = document.getElementById('notesSaved');
-    if (el) el.textContent = 'Saved';
-  }, 500);
-
   view.onClick = function (e, a) {
     if (!a) return;
-    const today = U.todayKey();
-    const key = view.date || today;
+    const key = view.date || U.todayKey();
     switch (a.dataset.action) {
       case 'day-prev': view.date = U.addDays(key, -1); App.render(); break;
       case 'day-next': view.date = U.addDays(key, 1); App.render(); break;
       case 'day-today': view.date = null; App.render(); break;
-      case 'mood': {
-        const d = App.store.day(key);
-        d.mood = d.mood === a.dataset.mood ? null : a.dataset.mood;
-        App.store.save();
-        break;
-      }
       default:
-    }
-  };
-
-  view.onInput = function (e) {
-    const key = view.date || U.todayKey();
-    if (e.target.id === 'dayNotes') {
-      App.store.day(key).notes = e.target.value;
-      const el = document.getElementById('notesSaved');
-      if (el) el.textContent = 'Saving…';
-      saveNotes();
-    } else if (e.target.id === 'dayFocus') {
-      App.store.day(key).focus = e.target.value;
-      saveNotes();
     }
   };
 

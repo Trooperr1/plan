@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Daily Planner</title>
-  <meta name="description" content="Plan your day, calendar, reminders, habits and yearly timeline — all in one place.">
+  <meta name="description" content="Plan your day, calendar, reminders and yearly goals.">
   <meta name="theme-color" content="#4f46e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Planner">
@@ -16,7 +16,7 @@
     // Apply the saved theme before first paint to avoid a light/dark flash.
     (function () {
       var theme = 'system';
-      try { theme = (JSON.parse(localStorage.getItem('dailyPlanner.data.v1')) || {}).settings.theme || 'system'; } catch (e) {}
+      try { theme = (JSON.parse(localStorage.getItem('dailyPlanner.data.v2')) || {}).settings.theme || 'system'; } catch (e) {}
       var dark = theme === 'dark' || (theme === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     })();
@@ -73,7 +73,7 @@
   <script src="js/views/calendar.js"></script>
   <script src="js/views/tasks.js"></script>
   <script src="js/views/habits.js"></script>
-  <script src="js/views/timeline.js"></script>
+  <script src="js/views/goals.js"></script>
   <script src="js/views/settings.js"></script>
   <script src="js/main.js"></script>
 </body>

@@ -4,49 +4,17 @@ A complete personal planning app for your day, week and year. It runs in any bro
 
 ## Features
 
-### My Day (daily planner)
-- A greeting, today's date and a **Main focus** for the day
-- A progress ring, plus counts of tasks left, events, habits and overdue tasks
-- A **task list** with priorities, categories, checklists (sub-steps), notes and repeating tasks
-- **Quick add** that understands plain text: `Doctor at 4:30pm #health !high`
-- A **schedule timeline** of your events and timed tasks, with a red "Now" line
-- Habit check-ins, upcoming reminders, daily notes and a mood tracker
-- Move to the previous or next day, or jump to any date, to plan ahead
+The planner starts empty, so everything in it is yours.
 
-### Calendar
-- **Month view** showing events and tasks for each day
-- **Week view** with an hourly grid. Overlapping events sit side by side, and clicking an empty slot creates an event at that time
-- A day panel that lists everything on the selected day
+- **My Day**: today's tasks and schedule. Type a task and press **Add**. Use the arrows to plan tomorrow or any other day.
+- **Calendar**: month and week views. Tap a day to see or add its tasks and events.
+- **Reminders**: give a task or event a time and pick a reminder (at the start time, minutes or hours before, or 1 day before). It rings inside the app, and on your phone or computer if you turn on notifications in Settings.
+- **Tasks**: Today, Upcoming, All and Done, with search.
+- **Goals**: choose a year (for example **2028**), add a goal such as *Build my garage*, and list the steps to get there. Each goal shows its progress and appears on a 12-month view of that year.
+- **Habits** (optional): turn it on in Settings → Extra pages.
+- **Settings**: your name, theme, time format, reminders, and backup / restore.
 
-### Reminders
-- Set a reminder on any timed task or event: at start time, 5/10/15/30 min, 1–2 hours, or 1 day before
-- Reminders show inside the app with a chime, and as **phone or desktop notifications** if you allow them (Settings → Reminders)
-- A missed reminder (one from the last hour) still shows when you reopen the app
-
-### Tasks
-- Filters: Today, Next 14 days, Overdue, Someday, All and Completed
-- Search, plus category and priority filters
-- Undo after deleting
-
-### Habits
-- Daily check-ins for the last 7 days, current and best streak, 30-day consistency
-- A heatmap of the last 12 weeks for each habit
-
-### Year Timeline (separate page)
-- A **Theme / word of the year** and a year progress bar ("Day 289 of 365 · 76 days left")
-- **Roadmap (Gantt)**: each yearly goal is a bar across the months, filled to its progress, with milestone diamonds and a "today" line
-- Goal cards with a progress slider and a milestone checklist
-- **Month by month** cards listing each month's milestones and how many tasks you finished
-- **Year in pixels**: 365 squares, each coloured by how much you got done that day
-- Look back at past years or plan future ones
-
-### Settings
-- Your name, light/dark/automatic theme, first day of the week, 12- or 24-hour time
-- Notifications, reminder sound and default reminder time
-- Add, rename, recolour or delete categories
-- **Export / import a backup** (JSON), add sample data, or erase everything
-
-Keyboard shortcuts: `N` new task · `E` new event · `1`–`6` switch pages · `Esc` close dialog.
+Every task, event and goal form shows only the main fields. Tap **More options** for priority, category, checklist, location and notes.
 
 ## How to use it
 
@@ -63,7 +31,7 @@ python3 -m http.server 8000
 
 ## Your data
 
-Everything is saved in your browser's local storage, on that device only. Nothing is uploaded anywhere. To move your planner to another device, or to keep a safe copy, use **Settings → Export backup** and then **Import backup**.
+Everything is saved in your browser's local storage, on that device only. Nothing is uploaded anywhere. To move your planner to another device, or to keep a safe copy, use **Settings → Download backup** and then **Restore backup**.
 
 > Note: browsers only deliver reminders while the app is open or installed and running in the background. Keep it open in a tab, or install it, for reminders to arrive on time.
 
@@ -79,7 +47,7 @@ js/reminders.js       Reminder engine + notifications
 js/ui.js              Modals, confirms, toasts
 js/components.js      Shared task/event markup
 js/forms.js           Task, event, habit, goal dialogs
-js/views/*.js         Pages: today, calendar, tasks, habits, timeline, settings
+js/views/*.js         Pages: today, calendar, tasks, goals, habits, settings
 js/main.js            Routing, shortcuts, theme, boot
 sw.js                 Offline cache + notification clicks
 manifest.webmanifest  Install as an app

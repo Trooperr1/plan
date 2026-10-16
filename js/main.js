@@ -5,21 +5,23 @@
   const S = App.sched;
   const icon = (n, s) => App.icon(n, s);
 
-  const NAV = [
+  const ALL_NAV = [
     ['today', 'My Day', 'sun'],
     ['calendar', 'Calendar', 'calendar'],
     ['tasks', 'Tasks', 'list'],
+    ['goals', 'Goals', 'flag'],
     ['habits', 'Habits', 'flame'],
-    ['timeline', 'Year Timeline', 'flag'],
     ['settings', 'Settings', 'sliders'],
   ];
-  const SHORT = { timeline: 'Year', today: 'Today' };
+  const SHORT = { today: 'Today' };
+  // Habits is an optional page (Settings → Extra pages).
+  const nav = () => ALL_NAV.filter(([id]) => id !== 'habits' || App.store.state.settings.showHabits);
   let current = null;
   const viewEl = document.getElementById('view');
 
   function routeFromHash() {
     const r = location.hash.replace(/^#\/?/, '').split('/')[0];
-    return App.views[r] ? r : 'today';
+    return nav().some(([id]) => id === r) ? r : 'today';
   }
 
   /* ---------- Shared actions (used from any page) ---------- */
@@ -92,7 +94,7 @@
     },
     'new-habit'() { App.forms.habit(); },
     'edit-habit'(a) { const h = App.store.find('habits', a.dataset.id); if (h) App.forms.habit(h); },
-    'new-goal'() { /* handled by the timeline view (needs its year) */ return false; },
+    'new-goal'() { /* handled by the goals view (needs its year) */ return false; },
     'edit-goal'(a) { const g = App.store.find('goals', a.dataset.id); if (g) App.forms.goal(g); },
     'open-day'(a, e) {
       e.preventDefault();
@@ -105,11 +107,14 @@
   /* ---------- Rendering ---------- */
   function renderChrome() {
     const st = App.store.state;
-    const nav = NAV.map(([id, label, ic], i) => `
+    const items = nav();
+    const links = items.map(([id, label, ic], i) => `
       <a href="#/${id}" class="nav-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''} title="${label} (${i + 1})">
         ${icon(ic, 19)}<span>${label}</span>${id === 'tasks' ? badge() : ''}</a>`).join('');
-    document.getElementById('nav').innerHTML = nav;
-    document.getElementById('bottomNav').innerHTML = NAV.map(([id, label, ic]) => `
+    document.getElementById('nav').innerHTML = links;
+    const bottom = document.getElementById('bottomNav');
+    bottom.style.gridTemplateColumns = `repeat(${items.length}, 1fr)`;
+    bottom.innerHTML = items.map(([id, label, ic]) => `
       <a href="#/${id}" class="bn-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''}>${icon(ic, 21)}<span>${SHORT[id] || label}</span></a>`).join('');
 
     const y = new Date().getFullYear();
@@ -230,7 +235,7 @@
     const k = e.key.toLowerCase();
     if (k === 'n') { e.preventDefault(); document.querySelector('[data-global="new-task"]').click(); }
     else if (k === 'e') { e.preventDefault(); document.querySelector('[data-global="new-event"]').click(); }
-    else if (/^[1-6]$/.test(k)) location.hash = `#/${NAV[Number(k) - 1][0]}`;
+    else if (/^[1-9]$/.test(k) && nav()[Number(k) - 1]) location.hash = `#/${nav()[Number(k) - 1][0]}`;
   });
 
   window.addEventListener('hashchange', navigate);
@@ -250,7 +255,10 @@
 
   App.store.load();
   applyTheme();
-  App.store.on(() => render());
+  App.store.on(() => {
+    if (routeFromHash() !== current) location.hash = '#/' + routeFromHash();
+    render();
+  });
   navigate();
   tick();
   setInterval(tick, 5000);

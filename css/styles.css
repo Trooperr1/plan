@@ -793,7 +793,7 @@ output { font-weight: 700; color: var(--primary); }
   .bn-link.on { color: var(--primary); }
   .bn-link.on .ico { background: var(--primary-soft); border-radius: 99px; padding: 3px 12px; width: 46px; height: 27px; }
 
-  .toasts { left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); align-items: stretch; }
+  .toasts { left: 16px; right: 16px; top: calc(12px + env(safe-area-inset-top)); bottom: auto; align-items: stretch; }
   .toast { width: auto; max-width: none; }
 
   .hero { flex-direction: column; align-items: stretch; padding: 18px; }
@@ -827,6 +827,7 @@ output { font-weight: 700; color: var(--primary); }
   .modal-backdrop { padding: 0; place-items: end stretch; }
   .modal, .modal.sm { width: 100%; max-height: 92vh; border-radius: 20px 20px 0 0; padding-bottom: env(safe-area-inset-bottom); }
   .list-row { flex-wrap: wrap; }
+  .list-row input[type="text"] { flex: 1 1 calc(100% - 70px); }
   .list-row input[type="date"] { width: auto; flex: 1; margin-left: 26px; }
   .hd b { width: 30px; height: 30px; font-size: 12px; }
   .shortcuts { grid-template-columns: minmax(0, 1fr); }
@@ -836,4 +837,26 @@ output { font-weight: 700; color: var(--primary); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ---------- Simple mode additions ---------- */
+.more { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.more summary {
+  list-style: none; cursor: pointer; padding: 11px 14px;
+  font-size: 13.5px; font-weight: 600; color: var(--text-2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.more summary::-webkit-details-marker { display: none; }
+.more summary::after { content: "+"; font-size: 18px; line-height: 1; color: var(--muted); }
+.more[open] summary::after { content: "–"; }
+.more-body { display: flex; flex-direction: column; gap: 14px; padding: 4px 14px 14px; }
+
+.year-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; scrollbar-width: none; }
+.year-chips::-webkit-scrollbar { display: none; }
+.year-hero h2 { font-size: 22px; }
+.timeline-page .goal-grid { margin-bottom: 18px; }
+.g-row { grid-template-columns: 170px minmax(0, 1fr); }
+@media (max-width: 860px) {
+  .g-row { grid-template-columns: 110px minmax(0, 1fr); }
+  .year-hero { gap: 14px; }
 }

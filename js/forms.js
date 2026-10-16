@@ -60,7 +60,7 @@
     });
     function add() {
       sync();
-      items.push(blank());
+      items.push(blank(items));
       render();
       const inputs = container.querySelectorAll('input[type="text"]');
       if (inputs.length) inputs[inputs.length - 1].focus();
@@ -82,25 +82,30 @@
             <input name="title" type="text" maxlength="200" value="${esc(t.title)}" placeholder="What do you need to do?" autocomplete="off" autofocus></label>
           <div class="row-2">
             <label class="field"><span>Date</span><input type="date" name="date" value="${t.date || ''}"></label>
-            <label class="field"><span>Time <em>(optional)</em></span><input type="time" name="time" value="${t.time || ''}"></label>
-          </div>
-          <div class="field"><span>Priority</span>
-            <div class="segmented" role="radiogroup">
-              ${['low', 'medium', 'high'].map((p) => `
-                <label class="seg prio-${p}"><input type="radio" name="priority" value="${p}" ${t.priority === p ? 'checked' : ''}><span>${S.PRIORITIES[p]}</span></label>`).join('')}
-            </div>
+            <label class="field"><span>Time</span><input type="time" name="time" value="${t.time || ''}"></label>
           </div>
           <div class="row-2">
-            <label class="field"><span>Category</span><select name="category">${catOptions(t.category)}</select></label>
+            <label class="field"><span>Reminder</span><select name="reminder">${reminderOptions(t.reminder)}</select></label>
             <label class="field"><span>Repeat</span><select name="repeat">${repeatOptions(t.repeat)}</select></label>
           </div>
-          <label class="field"><span>Reminder</span><select name="reminder">${reminderOptions(t.reminder)}</select></label>
-          <p class="hint" data-reminder-hint hidden>${icon('alert', 13)} Reminders need a date and a time.</p>
-          <div class="field"><span>Checklist</span>
-            <div class="list-editor" data-subs></div>
-            <button type="button" class="btn ghost sm add-row" data-add-sub>${icon('plus', 14)}Add step</button>
-          </div>
-          <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Details, links, ideas…">${esc(t.notes)}</textarea></label>
+          <p class="hint" data-reminder-hint hidden>${icon('alert', 13)} Pick a date and time so the reminder knows when to ring.</p>
+          <details class="more" ${!isNew && (t.subtasks.length || t.notes || t.priority !== 'medium') ? 'open' : ''}>
+            <summary>More options</summary>
+            <div class="more-body">
+              <div class="field"><span>Priority</span>
+                <div class="segmented" role="radiogroup">
+                  ${['low', 'medium', 'high'].map((p) => `
+                    <label class="seg prio-${p}"><input type="radio" name="priority" value="${p}" ${t.priority === p ? 'checked' : ''}><span>${S.PRIORITIES[p]}</span></label>`).join('')}
+                </div>
+              </div>
+              <label class="field"><span>Category</span><select name="category">${catOptions(t.category)}</select></label>
+              <div class="field"><span>Checklist</span>
+                <div class="list-editor" data-subs></div>
+                <button type="button" class="btn ghost sm add-row" data-add-sub>${icon('plus', 14)}Add step</button>
+              </div>
+              <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Details…">${esc(t.notes)}</textarea></label>
+            </div>
+          </details>
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -162,22 +167,25 @@
         <form id="${id}" class="form" novalidate>
           <label class="field"><span>Title</span>
             <input name="title" type="text" maxlength="200" value="${esc(ev.title)}" placeholder="Meeting, class, appointment…" autocomplete="off" autofocus></label>
-          <div class="row-2">
-            <label class="field"><span>Date</span><input type="date" name="date" value="${ev.date || U.todayKey()}" required></label>
-            <label class="field switch-field"><span>All day</span>
-              <span class="switch"><input type="checkbox" name="allDay" ${ev.allDay ? 'checked' : ''}><i></i></span></label>
-          </div>
+          <label class="field"><span>Date</span><input type="date" name="date" value="${ev.date || U.todayKey()}" required></label>
           <div class="row-2" data-times>
             <label class="field"><span>Starts</span><input type="time" name="start" value="${ev.start || '09:00'}"></label>
             <label class="field"><span>Ends</span><input type="time" name="end" value="${ev.end || '10:00'}"></label>
           </div>
           <div class="row-2">
-            <label class="field"><span>Category</span><select name="category">${catOptions(ev.category)}</select></label>
+            <label class="field" data-reminder><span>Reminder</span><select name="reminder">${reminderOptions(ev.reminder)}</select></label>
             <label class="field"><span>Repeat</span><select name="repeat">${repeatOptions(ev.repeat)}</select></label>
           </div>
-          <label class="field" data-reminder><span>Reminder</span><select name="reminder">${reminderOptions(ev.reminder)}</select></label>
-          <label class="field"><span>Location</span><input type="text" name="location" value="${esc(ev.location)}" placeholder="Where?" autocomplete="off"></label>
-          <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Agenda, links, details…">${esc(ev.notes)}</textarea></label>
+          <details class="more" ${!isNew && (ev.allDay || ev.location || ev.notes) ? 'open' : ''}>
+            <summary>More options</summary>
+            <div class="more-body">
+              <label class="field switch-field"><span>All day</span>
+                <span class="switch"><input type="checkbox" name="allDay" ${ev.allDay ? 'checked' : ''}><i></i></span></label>
+              <label class="field"><span>Category</span><select name="category">${catOptions(ev.category)}</select></label>
+              <label class="field"><span>Location</span><input type="text" name="location" value="${esc(ev.location)}" placeholder="Where?" autocomplete="off"></label>
+              <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Details…">${esc(ev.notes)}</textarea></label>
+            </div>
+          </details>
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -270,32 +278,35 @@
     });
   }
 
-  /* ---------------- Goal (yearly timeline) ---------------- */
+  /* ---------------- Goal ---------------- */
   function goal(existing, preset) {
     const isNew = !existing;
     const g = isNew ? store().newGoal(preset) : clone(existing);
     const id = 'goalForm';
     const m = App.ui.modal({
-      title: isNew ? 'New yearly goal' : 'Edit goal',
+      title: isNew ? 'New goal' : 'Edit goal',
       body: `
         <form id="${id}" class="form" novalidate>
           <label class="field"><span>Goal</span>
-            <input name="title" type="text" maxlength="120" value="${esc(g.title)}" placeholder="e.g. Run a half marathon" autocomplete="off" autofocus></label>
-          <div class="row-2">
-            <label class="field"><span>Year</span><input type="number" name="year" min="2000" max="2100" value="${g.year}"></label>
-            <label class="field"><span>Category</span><select name="category">${catOptions(g.category)}</select></label>
-          </div>
+            <input name="title" type="text" maxlength="120" value="${esc(g.title)}" placeholder="e.g. Build my garage" autocomplete="off" autofocus></label>
+          <label class="field"><span>Year</span><input type="number" name="year" min="2000" max="2100" value="${g.year}"></label>
           <div class="row-2">
             <label class="field"><span>From</span><select name="startMonth">${monthOptions(g.startMonth)}</select></label>
             <label class="field"><span>To</span><select name="endMonth">${monthOptions(g.endMonth)}</select></label>
           </div>
-          <label class="field"><span>Progress <output data-out>${g.progress}%</output></span>
-            <input type="range" name="progress" min="0" max="100" step="5" value="${g.progress}"></label>
-          <div class="field"><span>Milestones</span>
+          <div class="field"><span>Steps <em>(optional)</em></span>
             <div class="list-editor" data-ms></div>
-            <button type="button" class="btn ghost sm add-row" data-add-ms>${icon('plus', 14)}Add milestone</button>
+            <button type="button" class="btn ghost sm add-row" data-add-ms>${icon('plus', 14)}Add step</button>
           </div>
-          <label class="field"><span>Why it matters / plan</span><textarea name="notes" rows="3" placeholder="Your motivation and the steps to get there">${esc(g.notes)}</textarea></label>
+          <details class="more" ${!isNew && (g.notes || g.progress) ? 'open' : ''}>
+            <summary>More options</summary>
+            <div class="more-body">
+              <label class="field"><span>Progress <output data-out>${g.progress}%</output></span>
+                <input type="range" name="progress" min="0" max="100" step="5" value="${g.progress}"></label>
+              <label class="field"><span>Category</span><select name="category">${catOptions(g.category)}</select></label>
+              <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Why it matters, your plan…">${esc(g.notes)}</textarea></label>
+            </div>
+          </details>
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -304,8 +315,15 @@
         f.progress.addEventListener('input', () => { el.querySelector('[data-out]').textContent = `${f.progress.value}%`; });
         const year = () => Number(f.year.value) || g.year;
         const msEd = listEditor(el.querySelector('[data-ms]'), g.milestones.map((x) => ({ ...x })),
-          (x) => `<input type="checkbox" data-k="done" ${x.done ? 'checked' : ''} aria-label="Done"><input type="text" data-k="title" value="${esc(x.title)}" placeholder="Milestone"><input type="date" data-k="date" value="${x.date || ''}" aria-label="Milestone date">`,
-          () => ({ id: U.uid(), title: '', date: `${year()}-${U.pad(Number(f.endMonth.value) + 1)}-15`, done: false }));
+          (x) => `<input type="checkbox" data-k="done" ${x.done ? 'checked' : ''} aria-label="Done"><input type="text" data-k="title" value="${esc(x.title)}" placeholder="Step"><input type="date" data-k="date" value="${x.date || ''}" aria-label="Step date">`,
+          (list) => {
+            // Each new step defaults to a month after the previous one, inside the goal's year.
+            const y = year();
+            let m = Number(f.startMonth.value);
+            const last = list.length && list[list.length - 1].date;
+            if (last && Number(last.slice(0, 4)) === y) m = Math.min(11, Number(last.slice(5, 7)));
+            return { id: U.uid(), title: '', date: `${y}-${U.pad(m + 1)}-${U.pad(Math.min(28, U.daysInMonth(y, m)))}`, done: false };
+          });
         el.querySelector('[data-add-ms]').addEventListener('click', msEd.add);
 
         form.addEventListener('submit', (e) => {
@@ -328,7 +346,8 @@
             .map((x) => ({ id: x.id, title: x.title.trim(), date: x.date || `${yr}-${U.pad(em + 1)}-15`, done: !!x.done }))
             .sort((a, b) => a.date.localeCompare(b.date));
           store().upsert('goals', g);
-          App.ui.toast(isNew ? 'Goal added to your timeline' : 'Goal saved');
+          if (App.views.goals) App.views.goals.showYear(g.year);
+          App.ui.toast(isNew ? `Goal added to ${g.year}` : 'Goal saved');
           m.close();
         });
         const del = el.querySelector('[data-delete]');
