@@ -130,7 +130,23 @@
     return Math.round((done / days) * 100);
   }
 
+  /* Goals: progress comes from finished steps when the goal has steps. */
+  function goalProgress(g) {
+    if (!g.milestones || !g.milestones.length) return g.progress || 0;
+    return Math.round((g.milestones.filter((m) => m.done).length / g.milestones.length) * 100);
+  }
+  function goalEnd(g) {
+    return `${g.year}-${U.pad(g.endMonth + 1)}-${U.pad(U.daysInMonth(g.year, g.endMonth))}`;
+  }
+  function goalDaysLeft(g) {
+    return U.diffDays(U.todayKey(), goalEnd(g));
+  }
+  function goalSaved(g) {
+    return (g.savings || []).reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  }
+
   App.sched = {
+    goalProgress, goalEnd, goalDaysLeft, goalSaved,
     REPEATS, REPEAT_SHORT, REMINDERS, PRIORITIES,
     isRecurring, occursOn, isDone, setDone, tasksOn, eventsOn, overdue, agenda, dayStats,
     habitDone, toggleHabit, streak, bestStreak, habitRate, byTimeThenPrio,

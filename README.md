@@ -14,6 +14,12 @@ The planner starts empty, so everything in it is yours.
 - **Habits** (optional): turn it on in Settings → Extra pages.
 - **Settings**: your name, theme, time format, reminders, and backup / restore.
 
+- **Add to phone calendar**: on any task, event or goal, so your phone's own calendar rings even when this app is closed.
+- **Tasks linked to goals**: a task like *Buy bricks* belongs to *Build my garage*. A goal's % fills by itself as you tick off its steps, and it shows how many days are left.
+- **Money target**: set how much a goal costs, add what you save, and see what's left.
+- **Evening plan**: after 6 PM, My Day offers to move unfinished tasks to tomorrow. Overdue tasks can be moved to today in one tap.
+- **Data safety**: the app asks the browser to keep your data, reminds you to download a backup every 14 days, and shows how to install it on your phone.
+
 Every task, event and goal form shows only the main fields. Tap **More options** for priority, category, checklist, location and notes.
 
 ## How to use it

@@ -3,6 +3,7 @@
   const App = window.App;
   const U = App.util;
   const C = App.c;
+  const S = App.sched;
   const icon = (n, s) => App.icon(n, s);
 
   const view = { title: 'Goals', year: null };
@@ -61,8 +62,8 @@
           </div>
           <div class="g-track">
             ${marker}
-            <div class="g-bar" style="left:${left}%;width:${width}%;--c:${U.esc(c)}" data-action="edit-goal" data-id="${g.id}" title="${U.esc(g.title)} · ${g.progress}%">
-              <div class="g-fill" style="width:${g.progress}%"></div><span>${g.progress}%</span>
+            <div class="g-bar" style="left:${left}%;width:${width}%;--c:${U.esc(c)}" data-action="edit-goal" data-id="${g.id}" title="${U.esc(g.title)} · ${S.goalProgress(g)}%">
+              <div class="g-fill" style="width:${S.goalProgress(g)}%"></div><span>${S.goalProgress(g)}%</span>
             </div>
             ${ms}
           </div>
@@ -82,29 +83,64 @@
       </section>`;
   }
 
+  function countdown(g) {
+    const left = S.goalDaysLeft(g);
+    if (S.goalProgress(g) >= 100) return 'Done 🎉';
+    if (left < 0) return 'Time is up';
+    if (left === 0) return 'Last day';
+    return `${left} day${left === 1 ? '' : 's'} left`;
+  }
+
+  function moneyBlock(g) {
+    const saved = S.goalSaved(g);
+    if (!g.target && !saved) return '';
+    const pct = g.target ? U.clamp((saved / g.target) * 100, 0, 100) : 0;
+    return `
+      <button type="button" class="money-box" data-action="goal-money" data-id="${g.id}">
+        <span class="money-line"><span>${icon('target', 14)} Saved</span><strong>${U.money(saved)}${g.target ? ` <em>/ ${U.money(g.target)}</em>` : ''}</strong></span>
+        ${g.target ? `<span class="bar"><span style="width:${pct}%"></span></span>
+        <span class="muted sm">${saved >= g.target ? 'Target reached 🎉' : `${U.money(g.target - saved)} left`}</span>` : ''}
+      </button>`;
+  }
+
   function goalCard(g) {
     const c = App.store.category(g.category).color;
     const msDone = g.milestones.filter((m) => m.done).length;
+    const progress = S.goalProgress(g);
+    const today = U.todayKey();
+    const tasks = App.store.state.tasks.filter((t) => t.goalId === g.id);
+    const open = tasks.filter((t) => !S.isDone(t, t.date && t.date > today ? t.date : today))
+      .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')).slice(0, 3);
     return `
       <section class="card goal-card" style="--c:${U.esc(c)}">
         <div class="goal-head">
           <div>
             <h3>${U.esc(g.title)}</h3>
-            <p class="muted sm">${U.MONTHS_SHORT[g.startMonth]} – ${U.MONTHS_SHORT[g.endMonth]} ${g.year}${g.milestones.length ? ` · ${msDone}/${g.milestones.length} steps done` : ''}</p>
+            <p class="muted sm">${U.MONTHS_SHORT[g.startMonth]} – ${U.MONTHS_SHORT[g.endMonth]} ${g.year} · <strong class="countdown">${countdown(g)}</strong></p>
           </div>
           <button type="button" class="icon-btn" data-action="edit-goal" data-id="${g.id}" aria-label="Edit goal">${icon('edit', 16)}</button>
         </div>
         <div class="goal-progress">
-          <div class="bar"><div style="width:${g.progress}%"></div></div>
-          <strong data-prog-label="${g.id}">${g.progress}%</strong>
+          <div class="bar"><div style="width:${progress}%"></div></div>
+          <strong data-prog-label="${g.id}">${progress}%</strong>
         </div>
-        <input type="range" min="0" max="100" step="5" value="${g.progress}" data-progress="${g.id}" aria-label="Progress for ${U.esc(g.title)}">
+        ${g.milestones.length
+          ? `<p class="muted sm">${msDone} of ${g.milestones.length} steps done</p>`
+          : `<input type="range" min="0" max="100" step="5" value="${g.progress}" data-progress="${g.id}" aria-label="Progress for ${U.esc(g.title)}">`}
+        ${moneyBlock(g)}
         ${g.milestones.length ? `<ul class="ms-list">${g.milestones.map((m) => `
           <li class="${m.done ? 'done' : ''}">
             <button type="button" class="mini-check ${m.done ? 'on' : ''}" style="--c:${U.esc(c)}" data-action="toggle-ms" data-goal="${g.id}" data-ms="${m.id}" aria-pressed="${m.done}" aria-label="Mark step done">${icon('check', 10)}</button>
             <span>${U.esc(m.title)}<small>${U.fmtDate(m.date, { month: 'short', day: 'numeric', year: 'numeric' })}</small></span>
           </li>`).join('')}</ul>` : ''}
+        ${open.length ? `<div class="goal-tasks"><span class="group-label">${icon('list', 13)} Next tasks</span>
+          <div class="task-list">${open.map((t) => C.taskItem(t, t.date && t.date > today ? t.date : today, { showDate: true, hideGoal: true })).join('')}</div></div>` : ''}
         ${g.notes ? `<p class="goal-notes">${U.esc(g.notes)}</p>` : ''}
+        <div class="goal-actions">
+          <button type="button" class="btn ghost sm" data-action="new-task" data-goal="${g.id}">${icon('plus', 14)}Task</button>
+          <button type="button" class="btn ghost sm" data-action="goal-money" data-id="${g.id}">${icon('target', 14)}Money</button>
+          <button type="button" class="btn ghost sm" data-action="goal-ics" data-id="${g.id}" title="Add steps to phone calendar">${icon('bell', 14)}Phone calendar</button>
+        </div>
       </section>`;
   }
 
@@ -155,7 +191,7 @@
         if (!m) return;
         m.done = !m.done;
         App.store.save();
-        if (m.done) App.ui.toast(`Step done: ${m.title} 🎉`, { icon: 'trophy' });
+        if (m.done) App.ui.toast(S.goalProgress(g) >= 100 ? `Goal complete: ${g.title}! 🏆` : `Step done: ${m.title} 🎉`, { icon: 'trophy' });
         break;
       }
       default:

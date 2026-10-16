@@ -1,5 +1,5 @@
 /* Service worker: offline support + notification clicks. Bump VERSION when files change. */
-const VERSION = 'planner-v2';
+const VERSION = 'planner-v3';
 const ASSETS = [
   './',
   'index.html',
@@ -16,6 +16,8 @@ const ASSETS = [
   'js/components.js',
   'js/forms.js',
   'js/reminders.js',
+  'js/ics.js',
+  'js/safety.js',
   'js/views/today.js',
   'js/views/calendar.js',
   'js/views/tasks.js',

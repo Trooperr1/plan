@@ -26,6 +26,8 @@
     if (t.reminder != null && t.time) meta.push(`<span class="meta" title="Reminder set">${icon('bell', 13)}</span>`);
     if (subs.length) meta.push(`<span class="meta">${icon('check', 13)}${subDone}/${subs.length}</span>`);
     if (t.notes) meta.push(`<span class="meta" title="Has notes">${icon('note', 13)}</span>`);
+    const goal = !opts.hideGoal && t.goalId && App.store.find('goals', t.goalId);
+    if (goal) meta.push(`<span class="meta goal-tag">${icon('flag', 13)}${U.esc(goal.title)}</span>`);
 
     const subList = opts.showSubs && subs.length
       ? `<ul class="subtask-list">${subs.map((s) => `

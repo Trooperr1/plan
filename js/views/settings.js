@@ -32,6 +32,8 @@
                 <option value="12" ${sel('12', s.clock)}>12-hour (2:30 PM)</option>
                 <option value="24" ${sel('24', s.clock)}>24-hour (14:30)</option>
               </select></label>
+            <label class="field"><span>Money symbol</span>
+              <input type="text" id="setCurrency" data-setting="currency" value="${U.esc(s.currency)}" placeholder="e.g. Rs, $, €" maxlength="6" autocomplete="off"></label>
             <label class="field"><span>Week starts on</span>
               <select id="setWeek" data-setting="weekStart" data-num>
                 <option value="1" ${sel(1, s.weekStart)}>Monday</option>
@@ -66,12 +68,37 @@
         </section>
 
         <section class="card">
-          <div class="card-head"><h3>${icon('download')} Backup</h3></div>
-          <p class="muted sm">Your planner is saved on this device. Download a backup to keep it safe or move it to another phone.</p>
+          <div class="card-head"><h3>${icon('download')} Keep your data safe</h3></div>
+          <ul class="safety-list">
+            <li class="ok">${icon('check', 15)}<span>Saved on this device</span></li>
+            <li class="${App.safety.persisted ? 'ok' : 'warn'}">${icon(App.safety.persisted ? 'check' : 'alert', 15)}
+              <span>${App.safety.persisted ? 'Protected from automatic clean-up' : 'Not fully protected. Install the app to protect it.'}</span></li>
+            <li class="${App.store.state.meta.lastBackup ? 'ok' : 'warn'}">${icon(App.store.state.meta.lastBackup ? 'check' : 'alert', 15)}
+              <span>Last backup: ${App.safety.lastBackupText()}</span></li>
+          </ul>
           <div class="btn-row">
             <button type="button" class="btn primary" data-action="export">${icon('download', 16)}Download backup</button>
             <label class="btn ghost file-btn">${icon('upload', 16)}Restore backup<input type="file" id="importFile" accept="application/json,.json" hidden></label>
-            <button type="button" class="btn ghost danger-text" data-action="clear-all">${icon('trash', 16)}Delete everything</button>
+          </div>
+          <p class="muted sm tip">Save the backup file in Google Drive, iCloud or your email. To move to a new phone, open the app there and tap <strong>Restore backup</strong>.</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h3>📲 Install on your phone</h3></div>
+          ${App.safety.isInstalled() ? `<p class="safety-list ok-line">${icon('check', 15)} The app is installed.</p>` : `
+            ${App.safety.installPrompt ? `<button type="button" class="btn primary" data-action="install-app">${icon('download', 16)}Install app</button>` : ''}
+            <ol class="install-steps">
+              ${App.safety.isIOS()
+                ? '<li>Open this page in <strong>Safari</strong>.</li><li>Tap the <strong>Share</strong> button (square with an arrow).</li><li>Tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>'
+                : '<li>Open this page in <strong>Chrome</strong>.</li><li>Tap the <strong>⋮</strong> menu at the top right.</li><li>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>'}
+            </ol>`}
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h3>${icon('trash')} Start over</h3></div>
+          <div class="setting-row">
+            <div><p class="muted sm">Delete all tasks, events, habits and goals from this device.</p></div>
+            <button type="button" class="btn ghost sm danger-text" data-action="clear-all">${icon('trash', 15)}Delete everything</button>
           </div>
         </section>
       </div>`;
@@ -86,7 +113,7 @@
   }
 
   view.onInput = function (e) {
-    if (e.target.dataset.setting !== 'name') return;
+    if (e.target.dataset.setting !== 'name' && e.target.dataset.setting !== 'currency') return;
     setSetting(e.target);
     App.store.save({ silent: true });
     App.renderChrome();
@@ -94,7 +121,9 @@
 
   view.onChange = async function (e) {
     const el = e.target;
-    if (el.dataset.setting && el.dataset.setting !== 'name') {
+    if (el.dataset.setting === 'currency') {
+      App.store.save();
+    } else if (el.dataset.setting && el.dataset.setting !== 'name') {
       if (el.dataset.setting === 'notifications' && el.checked) {
         const ok = await App.reminders.requestPermission();
         if (!ok) {
@@ -129,24 +158,13 @@
 
   view.onClick = async function (e, a) {
     if (!a) return;
-    const st = App.store.state;
     switch (a.dataset.action) {
       case 'test-reminder':
         App.reminders.fire('Test reminder', 'Your reminders are working 🎉', 'test');
         break;
-      case 'export': {
-        const blob = new Blob([JSON.stringify(st, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `daily-planner-backup-${U.todayKey()}.json`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        App.ui.toast('Backup downloaded');
+      case 'export':
+        App.safety.backup();
         break;
-      }
       case 'clear-all':
         if (await App.ui.confirm('Delete all tasks, events, habits and goals? This cannot be undone.', { okText: 'Delete everything', title: 'Delete everything' })) {
           App.store.reset();

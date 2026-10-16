@@ -22,6 +22,17 @@
       <button type="submit" class="btn primary" form="${formId}">${isNew ? 'Create' : 'Save'}</button>`;
   }
 
+  function goalPicker(selected) {
+    const goals = store().state.goals.slice().sort((a, b) => a.year - b.year || a.startMonth - b.startMonth);
+    if (!goals.length) return '';
+    return `<label class="field"><span>Goal <em>(optional)</em></span>
+      <select name="goalId">${opts([[null, 'No goal'], ...goals.map((g) => [g.id, `${g.title} (${g.year})`])], selected)}</select></label>`;
+  }
+
+  function phoneButton() {
+    return `<button type="button" class="btn ghost phone-cal" data-ics>${icon('bell', 16)}Add to phone calendar <em>rings even when this app is closed</em></button>`;
+  }
+
   function fieldError(form, name, msg) {
     const input = form.elements[name];
     input.classList.add('invalid');
@@ -89,6 +100,7 @@
             <label class="field"><span>Repeat</span><select name="repeat">${repeatOptions(t.repeat)}</select></label>
           </div>
           <p class="hint" data-reminder-hint hidden>${icon('alert', 13)} Pick a date and time so the reminder knows when to ring.</p>
+          ${goalPicker(t.goalId)}
           <details class="more" ${!isNew && (t.subtasks.length || t.notes || t.priority !== 'medium') ? 'open' : ''}>
             <summary>More options</summary>
             <div class="more-body">
@@ -106,6 +118,7 @@
               <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Details…">${esc(t.notes)}</textarea></label>
             </div>
           </details>
+          ${phoneButton()}
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -129,12 +142,15 @@
         form.elements.date.addEventListener('change', updateHint);
         updateHint();
 
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
+        const wasRecurring = S.isRecurring(t);
+        // Copy the form into the task; returns false when the title is missing.
+        const collect = () => {
           const f = form.elements;
           const title = f.title.value.trim();
-          if (!title) return fieldError(form, 'title', 'Please give the task a title.');
-          const wasRecurring = S.isRecurring(t);
+          if (!title) {
+            fieldError(form, 'title', 'Please give the task a title.');
+            return false;
+          }
           t.title = title;
           t.date = f.date.value || null;
           t.time = f.time.value || null;
@@ -145,11 +161,19 @@
           t.reminder = f.reminder.value === '' ? null : Number(f.reminder.value);
           t.notes = f.notes.value.trim();
           t.subtasks = subs.collect().filter((s) => s.title.trim()).map((s) => ({ id: s.id, title: s.title.trim(), done: !!s.done }));
+          t.goalId = f.goalId ? f.goalId.value || null : t.goalId;
           if (wasRecurring && !S.isRecurring(t)) t.done = false;
+          return true;
+        };
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (!collect()) return;
           store().upsert('tasks', t);
-          App.ui.toast(isNew ? 'Task created' : 'Task saved');
+          const saved = clone(t);
+          App.ui.toast(isNew ? 'Task created' : 'Task saved', isNew && t.time ? { action: { label: 'Add to phone calendar', fn: () => App.ics.task(saved) }, duration: 6000 } : {});
           m.close();
         });
+        el.querySelector('[data-ics]').addEventListener('click', () => { if (collect()) App.ics.task(t); });
         const del = el.querySelector('[data-delete]');
         if (del) del.addEventListener('click', () => { m.close(); App.actions.deleteTask(t.id); });
       },
@@ -186,6 +210,7 @@
               <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Details…">${esc(ev.notes)}</textarea></label>
             </div>
           </details>
+          ${phoneButton()}
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -206,28 +231,34 @@
         f.end.addEventListener('change', () => { ev.end = f.end.value; });
         syncAllDay();
 
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
+        const collect = () => {
           const title = f.title.value.trim();
-          if (!title) return fieldError(form, 'title', 'Please give the event a title.');
-          if (!f.date.value) return fieldError(form, 'date', 'Please choose a date.');
+          if (!title) return fieldError(form, 'title', 'Please give the event a title.'), false;
+          if (!f.date.value) return fieldError(form, 'date', 'Please choose a date.'), false;
           ev.title = title;
           ev.date = f.date.value;
           ev.allDay = f.allDay.checked;
           ev.start = f.start.value || '09:00';
           ev.end = f.end.value || U.fromMin(U.toMin(ev.start) + 60);
           if (!ev.allDay && U.toMin(ev.end) <= U.toMin(ev.start)) {
-            return fieldError(form, 'end', 'The end time must be after the start time.');
+            return fieldError(form, 'end', 'The end time must be after the start time.'), false;
           }
           ev.category = f.category.value;
           ev.repeat = f.repeat.value;
           ev.reminder = f.reminder.value === '' ? null : Number(f.reminder.value);
           ev.location = f.location.value.trim();
           ev.notes = f.notes.value.trim();
+          return true;
+        };
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (!collect()) return;
           store().upsert('events', ev);
-          App.ui.toast(isNew ? 'Event created' : 'Event saved');
+          const saved = clone(ev);
+          App.ui.toast(isNew ? 'Event created' : 'Event saved', isNew ? { action: { label: 'Add to phone calendar', fn: () => App.ics.event(saved) }, duration: 6000 } : {});
           m.close();
         });
+        el.querySelector('[data-ics]').addEventListener('click', () => { if (collect()) App.ics.event(ev); });
         const del = el.querySelector('[data-delete]');
         if (del) del.addEventListener('click', () => { m.close(); App.actions.deleteEvent(ev.id); });
       },
@@ -294,6 +325,8 @@
             <label class="field"><span>From</span><select name="startMonth">${monthOptions(g.startMonth)}</select></label>
             <label class="field"><span>To</span><select name="endMonth">${monthOptions(g.endMonth)}</select></label>
           </div>
+          <label class="field"><span>Money needed <em>(optional)</em></span>
+            <input type="number" name="target" min="0" step="any" inputmode="decimal" value="${g.target || ''}" placeholder="${store().state.settings.currency ? esc(store().state.settings.currency) + ' ' : ''}e.g. 500000"></label>
           <div class="field"><span>Steps <em>(optional)</em></span>
             <div class="list-editor" data-ms></div>
             <button type="button" class="btn ghost sm add-row" data-add-ms>${icon('plus', 14)}Add step</button>
@@ -301,8 +334,9 @@
           <details class="more" ${!isNew && (g.notes || g.progress) ? 'open' : ''}>
             <summary>More options</summary>
             <div class="more-body">
-              <label class="field"><span>Progress <output data-out>${g.progress}%</output></span>
+              <label class="field" data-progress-field><span>Progress <output data-out>${g.progress}%</output></span>
                 <input type="range" name="progress" min="0" max="100" step="5" value="${g.progress}"></label>
+              <p class="hint" data-progress-auto>Progress fills by itself as you tick off steps.</p>
               <label class="field"><span>Category</span><select name="category">${catOptions(g.category)}</select></label>
               <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Why it matters, your plan…">${esc(g.notes)}</textarea></label>
             </div>
@@ -324,7 +358,15 @@
             if (last && Number(last.slice(0, 4)) === y) m = Math.min(11, Number(last.slice(5, 7)));
             return { id: U.uid(), title: '', date: `${y}-${U.pad(m + 1)}-${U.pad(Math.min(28, U.daysInMonth(y, m)))}`, done: false };
           });
-        el.querySelector('[data-add-ms]').addEventListener('click', msEd.add);
+        el.querySelector('[data-add-ms]').addEventListener('click', () => { msEd.add(); syncProgress(); });
+        // With steps, progress is automatic, so hide the manual slider.
+        const syncProgress = () => {
+          const hasSteps = msEd.collect().length > 0;
+          el.querySelector('[data-progress-field]').hidden = hasSteps;
+          el.querySelector('[data-progress-auto]').hidden = !hasSteps;
+        };
+        el.querySelector('[data-ms]').addEventListener('click', () => setTimeout(syncProgress));
+        syncProgress();
 
         form.addEventListener('submit', (e) => {
           e.preventDefault();
@@ -341,6 +383,7 @@
           g.startMonth = sm;
           g.endMonth = em;
           g.progress = Number(f.progress.value);
+          g.target = Number(f.target.value) > 0 ? Number(f.target.value) : null;
           g.notes = f.notes.value.trim();
           g.milestones = msEd.collect().filter((x) => x.title.trim())
             .map((x) => ({ id: x.id, title: x.title.trim(), date: x.date || `${yr}-${U.pad(em + 1)}-15`, done: !!x.done }))
@@ -356,5 +399,57 @@
     });
   }
 
-  App.forms = { task, event, habit, goal };
+  /* ---------------- Money saved for a goal ---------------- */
+  function money(goalId) {
+    const m = App.ui.modal({
+      title: 'Money saved',
+      size: 'sm',
+      body: '<div data-money></div>',
+      onMount(el) {
+        const box = el.querySelector('[data-money]');
+        const render = () => {
+          const g = store().find('goals', goalId);
+          if (!g) return m.close();
+          const saved = S.goalSaved(g);
+          const pct = g.target ? U.clamp((saved / g.target) * 100, 0, 100) : 0;
+          box.innerHTML = `
+            <p class="money-goal">${esc(g.title)}</p>
+            ${g.target ? `
+              <div class="money-sum"><strong>${U.money(saved)}</strong><span>of ${U.money(g.target)}</span></div>
+              <div class="bar big money-bar"><div style="width:${pct}%"></div></div>
+              <p class="muted sm">${saved >= g.target ? 'Target reached 🎉' : `${U.money(g.target - saved)} left`}</p>` : `<div class="money-sum"><strong>${U.money(saved)}</strong><span>saved</span></div>`}
+            <form class="form money-form" id="moneyForm" novalidate>
+              <div class="row-2">
+                <label class="field"><span>Amount</span><input type="number" name="amount" min="0" step="any" inputmode="decimal" placeholder="e.g. 20000" autofocus></label>
+                <label class="field"><span>Date</span><input type="date" name="date" value="${U.todayKey()}"></label>
+              </div>
+              <button type="submit" class="btn primary">${icon('plus', 16)}Add money</button>
+            </form>
+            ${(g.savings || []).length ? `<ul class="money-list">${g.savings.slice().sort((a, b) => b.date.localeCompare(a.date)).map((x) => `
+              <li><span>${U.fmtDate(x.date, { day: 'numeric', month: 'short', year: 'numeric' })}</span><strong>${U.money(x.amount)}</strong>
+              <button type="button" class="icon-btn sm" data-rm-money="${x.id}" aria-label="Remove">${icon('x', 14)}</button></li>`).join('')}</ul>` : ''}`;
+          box.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const f = e.target.elements;
+            const amount = Number(f.amount.value);
+            if (!(amount > 0)) return fieldError(e.target, 'amount', 'Type how much you saved.');
+            g.savings = g.savings || [];
+            g.savings.push({ id: U.uid(), amount, date: f.date.value || U.todayKey() });
+            store().save();
+            App.ui.toast(`Added ${U.money(amount)}`);
+            render();
+            box.querySelector('input[name="amount"]').focus();
+          });
+          box.querySelectorAll('[data-rm-money]').forEach((b) => b.addEventListener('click', () => {
+            g.savings = g.savings.filter((x) => x.id !== b.dataset.rmMoney);
+            store().save();
+            render();
+          }));
+        };
+        render();
+      },
+    });
+  }
+
+  App.forms = { task, event, habit, goal, money };
 })();

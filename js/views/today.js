@@ -109,6 +109,72 @@
       </section>`;
   }
 
+  /* Helpful one-tap messages at the top of the day. */
+  function banners(key, isToday, tasks) {
+    const st = App.store.state;
+    const out = [];
+    const day = st.days[key] || {};
+    const unfinished = tasks.filter((t) => !S.isRecurring(t) && !t.done);
+    if (isToday && new Date().getHours() >= 18 && unfinished.length && !day.eveningDismissed) {
+      out.push(`
+        <div class="banner evening">
+          <span class="banner-icon">🌙</span>
+          <div><strong>${unfinished.length} task${unfinished.length === 1 ? '' : 's'} not done today</strong><span>Move ${unfinished.length === 1 ? 'it' : 'them'} to tomorrow so nothing gets lost.</span></div>
+          <div class="banner-actions">
+            <button type="button" class="btn primary sm" data-action="move-tomorrow" data-date="${key}">Move to tomorrow</button>
+            <button type="button" class="btn ghost sm" data-action="dismiss-evening" data-date="${key}">Not now</button>
+          </div>
+        </div>`);
+    }
+    if (App.safety.backupDue()) {
+      const last = st.meta.lastBackup;
+      out.push(`
+        <div class="banner backup">
+          <span class="banner-icon">💾</span>
+          <div><strong>${last ? `Last backup: ${U.agoDays(last)}` : 'You have no backup yet'}</strong><span>Download a backup so your plans are safe if this phone is lost or reset.</span></div>
+          <div class="banner-actions">
+            <button type="button" class="btn primary sm" data-action="backup-now">Back up now</button>
+            <button type="button" class="btn ghost sm" data-action="backup-later">Later</button>
+          </div>
+        </div>`);
+    } else if (App.safety.showInstallTip() && window.matchMedia('(max-width: 860px)').matches) {
+      out.push(`
+        <div class="banner install">
+          <span class="banner-icon">📲</span>
+          <div><strong>Add this app to your Home screen</strong><span>It opens faster, works offline and keeps your data safe.</span></div>
+          <div class="banner-actions">
+            ${App.safety.installPrompt ? '<button type="button" class="btn primary sm" data-action="install-app">Install</button>' : `<a class="btn primary sm" href="#/settings">How?</a>`}
+            <button type="button" class="btn ghost sm" data-action="dismiss-install">Close</button>
+          </div>
+        </div>`);
+    }
+    return out.join('');
+  }
+
+  /* The goals today's work leads to. */
+  function workingTowards(tasks) {
+    const st = App.store.state;
+    const today = U.todayKey();
+    const linked = new Set(tasks.map((t) => t.goalId).filter(Boolean));
+    const goals = st.goals
+      .filter((g) => S.goalProgress(g) < 100 && S.goalEnd(g) >= today)
+      .sort((a, b) => (linked.has(b.id) - linked.has(a.id)) || S.goalEnd(a).localeCompare(S.goalEnd(b)))
+      .slice(0, 3);
+    if (!goals.length) return '';
+    return `
+      <section class="towards">
+        <span class="towards-label">${icon('flag', 14)} Working towards</span>
+        <div class="towards-list">${goals.map((g) => {
+          const c = App.store.category(g.category).color;
+          const p = S.goalProgress(g);
+          return `<button type="button" class="towards-goal" style="--c:${U.esc(c)}" data-action="open-goal" data-year="${g.year}">
+            <strong>${U.esc(g.title)}</strong>
+            <span class="bar"><span style="width:${p}%"></span></span>
+            <small>${p}% · ${S.goalDaysLeft(g)} days left</small></button>`;
+        }).join('')}</div>
+      </section>`;
+  }
+
   view.render = function () {
     const st = App.store.state;
     const today = U.todayKey();
@@ -141,12 +207,16 @@
           ${tasks.length ? `<div class="hero-stats">${C.progressRing(pct, 88, `${done} of ${tasks.length}`)}</div>` : ''}
         </section>
 
+        ${banners(key, isToday, tasks)}
+        ${workingTowards(tasks)}
+
         <div class="today-cols">
           <div class="col">
             <section class="card">
               <div class="card-head"><h3>${icon('list')} Tasks</h3></div>
               ${late.length ? `
-                <div class="group-label danger">${icon('alert', 14)} Overdue <span>${late.length}</span></div>
+                <div class="group-label danger">${icon('alert', 14)} Overdue <span>${late.length}</span>
+                  <button type="button" class="btn ghost sm label-btn" data-action="move-overdue">Move all to today</button></div>
                 <div class="task-list">${late.map((t) => C.taskItem(t, t.date, { showDate: true })).join('')}</div>
                 <div class="group-label">${icon('sun', 14)} ${isToday ? 'Today' : U.relDay(key)}</div>` : ''}
               <div class="task-list">${taskList}</div>

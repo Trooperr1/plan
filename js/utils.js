@@ -120,6 +120,15 @@
     clamp(n, a, b) {
       return Math.max(a, Math.min(b, n));
     },
+    money(n) {
+      const cur = App.store && App.store.state ? App.store.state.settings.currency : '';
+      const num = Math.round(Number(n) || 0).toLocaleString();
+      return cur ? `${cur} ${num}` : num;
+    },
+    agoDays(ms) {
+      const d = Math.floor((Date.now() - ms) / 86400000);
+      return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
+    },
     greeting() {
       const h = new Date().getHours();
       if (h < 5) return 'Good night';

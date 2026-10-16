@@ -57,6 +57,17 @@
     },
   };
 
+  function moveTasks(list, toKey, label) {
+    if (!list.length) return;
+    const before = list.map((t) => [t, t.date]);
+    list.forEach((t) => { t.date = toKey; });
+    App.store.save();
+    App.ui.toast(`Moved ${list.length} task${list.length === 1 ? '' : 's'} to ${label}`, {
+      icon: 'right',
+      action: { label: 'Undo', fn: () => { before.forEach(([t, d]) => { t.date = d; }); App.store.save(); } },
+    });
+  }
+
   const shared = {
     'toggle-task'(a) {
       const t = App.store.find('tasks', a.dataset.id);
@@ -79,7 +90,12 @@
     },
     'edit-task'(a) { const t = App.store.find('tasks', a.dataset.id); if (t) App.forms.task(t); },
     'delete-task'(a) { App.actions.deleteTask(a.dataset.id); },
-    'new-task'(a) { App.forms.task(null, a.dataset.date ? { date: a.dataset.date } : {}); },
+    'new-task'(a) {
+      const preset = {};
+      if (a.dataset.date) preset.date = a.dataset.date;
+      if (a.dataset.goal) preset.goalId = a.dataset.goal;
+      App.forms.task(null, preset);
+    },
     'edit-event'(a) { const e = App.store.find('events', a.dataset.id); if (e) App.forms.event(e); },
     'new-event'(a) { App.forms.event(null, a.dataset.date ? { date: a.dataset.date } : {}); },
     'toggle-habit'(a) {
@@ -96,6 +112,34 @@
     'edit-habit'(a) { const h = App.store.find('habits', a.dataset.id); if (h) App.forms.habit(h); },
     'new-goal'() { /* handled by the goals view (needs its year) */ return false; },
     'edit-goal'(a) { const g = App.store.find('goals', a.dataset.id); if (g) App.forms.goal(g); },
+    'goal-money'(a) { App.forms.money(a.dataset.id); },
+    'goal-ics'(a) { const g = App.store.find('goals', a.dataset.id); if (g) App.ics.goal(g); },
+    'open-goal'(a) {
+      App.views.goals.showYear(Number(a.dataset.year));
+      location.hash = '#/goals';
+    },
+    'move-tomorrow'(a) {
+      const key = a.dataset.date;
+      const moved = S.tasksOn(key).filter((t) => !S.isRecurring(t) && !t.done);
+      moveTasks(moved, U.addDays(key, 1), 'tomorrow');
+    },
+    'move-overdue'() {
+      moveTasks(S.overdue(U.todayKey()), U.todayKey(), 'today');
+    },
+    'dismiss-evening'(a) {
+      App.store.day(a.dataset.date).eveningDismissed = true;
+      App.store.save();
+    },
+    'backup-now'() { App.safety.backup(); },
+    'backup-later'() { App.safety.snoozeBackup(); },
+    async 'install-app'() {
+      if (await App.safety.install()) App.ui.toast('App installed');
+      render();
+    },
+    'dismiss-install'() {
+      App.store.state.meta.installTipDismissed = true;
+      App.store.save();
+    },
     'open-day'(a, e) {
       e.preventDefault();
       App.views.today.date = a.dataset.date === U.todayKey() ? null : a.dataset.date;
@@ -263,6 +307,7 @@
   tick();
   setInterval(tick, 5000);
   App.reminders.start();
+  App.safety.protect().then(() => { if (current === 'settings') render(); });
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline support unavailable */ });

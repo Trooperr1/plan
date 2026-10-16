@@ -27,6 +27,7 @@
       days: {}, // per-day notes: { 'YYYY-MM-DD': { focus, notes, mood } }
       years: {}, // per-year info: { '2026': { theme } }
       notified: {}, // reminders already shown
+      meta: { createdAt: Date.now(), lastBackup: null, backupSnooze: null, installTipDismissed: false },
       categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
       settings: {
         name: '',
@@ -37,6 +38,7 @@
         sound: true,
         defaultReminder: 15,
         showHabits: false,
+        currency: '',
       },
     };
   }
@@ -46,6 +48,7 @@
     const src = data && typeof data === 'object' ? data : {};
     const out = { ...base, ...src };
     out.settings = { ...base.settings, ...(src.settings || {}) };
+    out.meta = { ...base.meta, ...(src.meta && typeof src.meta === 'object' ? src.meta : {}) };
     ['tasks', 'events', 'habits', 'goals', 'categories'].forEach((k) => {
       if (!Array.isArray(out[k])) out[k] = base[k];
     });
@@ -67,7 +70,7 @@
     return {
       id: U.uid(), title: '', notes: '', date: U.todayKey(), time: null, priority: 'medium',
       category: defaultCategory(), repeat: 'none', reminder: null, done: false, completedAt: null,
-      doneDates: {}, subtasks: [], createdAt: Date.now(), ...(p || {}),
+      doneDates: {}, subtasks: [], goalId: null, createdAt: Date.now(), ...(p || {}),
     };
   }
   function newEvent(p) {
@@ -84,7 +87,8 @@
     const now = new Date();
     return {
       id: U.uid(), title: '', notes: '', year: now.getFullYear(), category: defaultCategory(),
-      startMonth: now.getMonth(), endMonth: 11, progress: 0, milestones: [], createdAt: Date.now(), ...(p || {}),
+      startMonth: now.getMonth(), endMonth: 11, progress: 0, milestones: [], target: null, savings: [],
+      createdAt: Date.now(), ...(p || {}),
     };
   }
 
