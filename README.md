@@ -12,6 +12,12 @@ The planner starts empty, so everything in it is yours.
 - **Tasks**: Today, Upcoming, All and Done, with search.
 - **Goals**: choose a year (for example **2028**), add a goal such as *Build my garage*, and list the steps to get there. Each goal shows its progress and appears on a 12-month view of that year.
 - **Habits** (optional): turn it on in Settings → Extra pages.
+- **Money**: see where your money goes each month.
+  - Record what you **spend** and **receive**, with simple categories (food, rent, bills, transport…).
+  - See **Spent / Received / Left** for the month, compared with last month.
+  - Set a **monthly budget**: shows how much is left and about how much you can spend per day.
+  - **Monthly bills** (rent, internet, generator…): see what is paid, due soon or late, and pay with one tap. My Day warns you before a bill is due, it rings on the due day, and **Add to phone calendar** works for bills too.
+  - A breakdown by category, a 6-month spending chart, and a list of every payment.
 - **Kurdish (Sorani) or English**: the whole app, including dates and times, is in Kurdish Sorani and reads right to left. Switch the language in Settings → Language.
 - **Sunday review**: every Sunday, My Day shows a short review of your week (what you finished, what is left, money saved, goal steps done) and what is next for each goal. Open it any day with the **Week review** button.
 - **Settings**: your name, theme, time format, reminders, and backup / restore.
@@ -55,7 +61,8 @@ js/reminders.js       Reminder engine + notifications
 js/ui.js              Modals, confirms, toasts
 js/components.js      Shared task/event markup
 js/forms.js           Task, event, habit, goal dialogs
-js/views/*.js         Pages: today, calendar, tasks, goals, habits, review, settings
+js/views/*.js         Pages: today, calendar, tasks, goals, money, habits, review, settings
+js/money.js           Spending, income, bills and budget logic
 js/i18n.js            Language switching (English / Kurdish Sorani)
 js/lang-ckb.js        Kurdish Sorani translations
 js/main.js            Routing, shortcuts, theme, boot

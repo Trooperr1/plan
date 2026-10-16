@@ -28,6 +28,7 @@
       years: {}, // per-year info: { '2026': { theme } }
       reviews: {}, // weekly reviews by week-end (Sunday) date: { notes, seen }
       notified: {}, // reminders already shown
+      money: { entries: [], bills: [], budget: null }, // spending, income, monthly bills
       meta: { createdAt: Date.now(), lastBackup: null, backupSnooze: null, installTipDismissed: false },
       categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
       settings: {
@@ -140,6 +141,32 @@
     return g;
   }
 
+  function cleanMoney(m) {
+    m = isObj(m) ? m : {};
+    const RE_MONTH = /^\d{4}-\d{2}$/;
+    const thisMonth = U.todayKey().slice(0, 7);
+    const paid = (v) => {
+      const out = {};
+      if (isObj(v)) Object.keys(v).forEach((k) => { if (RE_MONTH.test(k) && typeof v[k] === 'string' && RE_ID.test(v[k])) out[k] = v[k]; });
+      return out;
+    };
+    return {
+      budget: num(m.budget, 0) > 0 ? num(m.budget, 0) : null,
+      entries: arr(m.entries).filter(isObj).map((e) => ({
+        id: id(e.id), type: oneOf(e.type, ['out', 'in'], 'out'), amount: Math.abs(num(e.amount, 0)),
+        cat: typeof e.cat === 'string' && RE_ID.test(e.cat) ? e.cat : 'other', date: date(e.date, U.todayKey()),
+        note: str(e.note, 120), billId: typeof e.billId === 'string' && RE_ID.test(e.billId) ? e.billId : null,
+        createdAt: num(e.createdAt, Date.now()),
+      })).filter((e) => e.amount > 0),
+      bills: arr(m.bills).filter(isObj).map((b) => ({
+        id: id(b.id), name: str(b.name, 80), amount: Math.abs(num(b.amount, 0)),
+        cat: typeof b.cat === 'string' && RE_ID.test(b.cat) ? b.cat : 'bills', day: int(b.day, 1, 31, 1),
+        start: typeof b.start === 'string' && RE_MONTH.test(b.start) ? b.start : thisMonth,
+        active: b.active !== false, paid: paid(b.paid), createdAt: num(b.createdAt, Date.now()),
+      })),
+    };
+  }
+
   function cleanSettings(s, base) {
     s = isObj(s) ? s : {};
     return {
@@ -171,6 +198,7 @@
     out.events = arr(src.events).map(cleanEvent);
     out.habits = arr(src.habits).map(cleanHabit);
     out.goals = arr(src.goals).map(cleanGoal);
+    out.money = cleanMoney(src.money);
     return out;
   }
 

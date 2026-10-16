@@ -11,6 +11,7 @@
     ['calendar', 'Calendar', 'calendar'],
     ['tasks', 'Tasks', 'list'],
     ['goals', 'Goals', 'flag'],
+    ['money', 'Money', 'wallet'],
     ['habits', 'Habits', 'flame'],
     ['settings', 'Settings', 'sliders'],
   ];
@@ -56,6 +57,24 @@
       if (!(await App.ui.confirm(T('Delete the goal “{name}” and its steps?', { name: g.title })))) return;
       const r = App.store.remove('goals', id);
       App.ui.toast(T('Goal deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => App.store.restore('goals', r.item, r.index) } });
+    },
+    async deleteEntry(id) {
+      const money = App.store.state.money;
+      const i = money.entries.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      if (!(await App.ui.confirm(T('Delete this payment?')))) return;
+      const [item] = money.entries.splice(i, 1);
+      App.store.save();
+      App.ui.toast(T('Payment deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => { money.entries.splice(i, 0, item); App.store.save(); } } });
+    },
+    async deleteBill(id) {
+      const money = App.store.state.money;
+      const i = money.bills.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      if (!(await App.ui.confirm(T('Delete the bill “{name}”? Payments you already made stay in your history.', { name: money.bills[i].name })))) return;
+      const [item] = money.bills.splice(i, 1);
+      App.store.save();
+      App.ui.toast(T('Bill deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => { money.bills.splice(i, 0, item); App.store.save(); } } });
     },
   };
 
@@ -150,6 +169,7 @@
       moveTasks(list, next >= today ? next : today, next >= today ? 'next week' : 'today');
     },
     'open-review'() { location.hash = '#/review'; },
+    'pay-bill'(a) { App.money.pay(a.dataset.id, a.dataset.month); },
     'review-later'() {
       const r = App.views.review.record(U.todayKey(), true);
       r.later = true;
@@ -222,6 +242,7 @@
     document.title = `${T(view.title)} · ${T('Daily Planner')}`;
     App.i18n.apply();
     renderChrome();
+    updateClock();
   }
 
   function navigate() {
@@ -243,9 +264,13 @@
   /* ---------- Clock & day rollover ---------- */
   let lastMinute = -1;
   let lastDay = U.todayKey();
-  function tick() {
+  function updateClock() {
     const now = new Date();
     document.getElementById('clock').textContent = `${U.fmtDate(U.todayKey(), { weekday: 'short', month: 'short', day: 'numeric' })} · ${U.fmtTime(`${U.pad(now.getHours())}:${U.pad(now.getMinutes())}`)}`;
+  }
+  function tick() {
+    const now = new Date();
+    updateClock();
     if (now.getMinutes() === lastMinute) return;
     lastMinute = now.getMinutes();
     const today = U.todayKey();

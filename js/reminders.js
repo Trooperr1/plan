@@ -101,6 +101,16 @@
       changed = true;
       fire(App.t('Sunday review'), App.t('Take 5 minutes to see your week and plan what is next.'), 'review');
     }
+    // Monthly bills: ring once on the due day, from 9 AM.
+    if (hour >= 9 && App.money) {
+      App.money.billsFor(today.slice(0, 7)).forEach((x) => {
+        const key = `bill:${x.bill.id}:${x.due}`;
+        if (x.entry || x.due !== today || state.notified[key]) return;
+        state.notified[key] = today;
+        changed = true;
+        fire(App.t('Bill due today: {name}', { name: x.bill.name }), U.money(x.bill.amount), key);
+      });
+    }
     // Forget reminder history older than a week.
     const cutoff = U.addDays(U.todayKey(), -7);
     Object.keys(state.notified).forEach((k) => {

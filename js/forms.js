@@ -452,5 +452,165 @@
     });
   }
 
-  App.forms = { task, event, habit, goal, money };
+  /* ---------------- Money: spending / income ---------------- */
+  const moneyList = () => store().state.money.entries;
+  const catPicker = (list, selected) => list.map((c) => `
+    <label class="cat-opt"><input type="radio" name="cat" value="${c.id}" ${c.id === selected ? 'checked' : ''}>
+      <span><b>${c.icon}</b>${esc(T(c.name))}</span></label>`).join('');
+  const amountField = (value) => {
+    const cur = store().state.settings.currency;
+    return `<label class="field"><span>${T('Amount')}</span>
+      <span class="amount-input"><input type="number" name="amount" min="0" step="any" inputmode="decimal" value="${value || ''}" placeholder="0" autofocus>${cur ? `<em>${esc(cur)}</em>` : ''}</span></label>`;
+  };
+
+  function entry(existing, preset) {
+    const M = App.money;
+    const isNew = !existing;
+    const e = isNew
+      ? { id: U.uid(), type: 'out', amount: '', cat: 'food', date: U.todayKey(), note: '', billId: null, createdAt: Date.now(), ...(preset || {}) }
+      : clone(existing);
+    const id = 'entryForm';
+    const m = App.ui.modal({
+      title: isNew ? (e.type === 'in' ? T('Money received') : T('New spending')) : T('Edit payment'),
+      body: `
+        <form id="${id}" class="form" novalidate>
+          <div class="segmented money-type" role="radiogroup">
+            <label class="seg out"><input type="radio" name="type" value="out" ${e.type === 'out' ? 'checked' : ''}><span>${icon('upload', 15)}${T('Spent')}</span></label>
+            <label class="seg in"><input type="radio" name="type" value="in" ${e.type === 'in' ? 'checked' : ''}><span>${icon('download', 15)}${T('Received')}</span></label>
+          </div>
+          ${amountField(e.amount)}
+          <div class="field"><span>${T('Category')}</span><div class="cat-pick" data-cats></div></div>
+          <div class="row-2">
+            <label class="field"><span>${T('Date')}</span><input type="date" name="date" value="${e.date}"></label>
+            <label class="field"><span>${T('Note')} <em>(${T('optional')})</em></span><input type="text" name="note" maxlength="120" value="${esc(e.note)}" placeholder="${T('What was it for?')}" autocomplete="off"></label>
+          </div>
+        </form>`,
+      footer: footer(id, isNew),
+      onMount(el) {
+        const form = el.querySelector('form');
+        const f = form.elements;
+        const cats = el.querySelector('[data-cats]');
+        const drawCats = () => {
+          const type = form.querySelector('input[name="type"]:checked').value;
+          const list = type === 'in' ? M.CATS_IN : M.CATS_OUT;
+          const cur = (form.querySelector('input[name="cat"]:checked') || {}).value || e.cat;
+          cats.innerHTML = catPicker(list, list.some((c) => c.id === cur) ? cur : list[0].id);
+          if (!cats.querySelector('input:checked')) cats.querySelector('input').checked = true;
+        };
+        form.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener('change', drawCats));
+        drawCats();
+        form.addEventListener('submit', (ev) => {
+          ev.preventDefault();
+          const amount = Number(f.amount.value);
+          if (!(amount > 0)) return fieldError(form, 'amount', T('Type the amount.'));
+          e.type = form.querySelector('input[name="type"]:checked').value;
+          e.amount = amount;
+          e.cat = form.querySelector('input[name="cat"]:checked').value;
+          e.date = f.date.value || U.todayKey();
+          e.note = f.note.value.trim();
+          const list = moneyList();
+          const i = list.findIndex((x) => x.id === e.id);
+          if (i >= 0) list[i] = e;
+          else list.push(e);
+          store().save();
+          App.ui.toast(`${e.type === 'in' ? '+' : '−'}${U.money(e.amount)} · ${T(M.cat(e.cat).name)}`, { icon: e.type === 'in' ? 'download' : 'check' });
+          m.close();
+        });
+        const del = el.querySelector('[data-delete]');
+        if (del) del.addEventListener('click', () => { m.close(); App.actions.deleteEntry(e.id); });
+      },
+    });
+  }
+
+  /* ---------------- Money: monthly bill ---------------- */
+  function bill(existing) {
+    const M = App.money;
+    const isNew = !existing;
+    const b = isNew
+      ? { id: U.uid(), name: '', amount: '', cat: 'bills', day: new Date().getDate(), start: M.thisMonth(), active: true, paid: {}, createdAt: Date.now() }
+      : clone(existing);
+    const id = 'billForm';
+    const m = App.ui.modal({
+      title: isNew ? T('New monthly bill') : T('Edit bill'),
+      body: `
+        <form id="${id}" class="form" novalidate>
+          <label class="field"><span>${T('Name')}</span>
+            <input type="text" name="name" maxlength="80" value="${esc(b.name)}" placeholder="${T('e.g. Internet, rent, generator')}" autocomplete="off" autofocus></label>
+          <div class="row-2">
+            ${amountField(b.amount).replace(' autofocus', '')}
+            <label class="field"><span>${T('Due every month on day')}</span><input type="number" name="day" min="1" max="31" inputmode="numeric" value="${b.day}"></label>
+          </div>
+          <div class="field"><span>${T('Category')}</span><div class="cat-pick">${catPicker(M.CATS_OUT, b.cat)}</div></div>
+          ${phoneButton()}
+        </form>`,
+      footer: footer(id, isNew),
+      onMount(el) {
+        const form = el.querySelector('form');
+        const f = form.elements;
+        const collect = () => {
+          const name = f.name.value.trim();
+          if (!name) return fieldError(form, 'name', T('Please give the bill a name.')), false;
+          const amount = Number(f.amount.value);
+          if (!(amount > 0)) return fieldError(form, 'amount', T('Type the amount.')), false;
+          const day = Math.round(Number(f.day.value));
+          if (!(day >= 1 && day <= 31)) return fieldError(form, 'day', T('Pick a day from 1 to 31.')), false;
+          b.name = name;
+          b.amount = amount;
+          b.day = day;
+          b.cat = (form.querySelector('input[name="cat"]:checked') || { value: 'bills' }).value;
+          return true;
+        };
+        form.addEventListener('submit', (ev) => {
+          ev.preventDefault();
+          if (!collect()) return;
+          const list = store().state.money.bills;
+          const i = list.findIndex((x) => x.id === b.id);
+          if (i >= 0) list[i] = b;
+          else list.push(b);
+          store().save();
+          const saved = clone(b);
+          App.ui.toast(isNew ? T('Bill added') : T('Bill saved'), isNew ? { action: { label: T('Add to phone calendar'), fn: () => App.ics.bill(saved) }, duration: 6000 } : {});
+          m.close();
+        });
+        el.querySelector('[data-ics]').addEventListener('click', () => { if (collect()) App.ics.bill(b); });
+        const del = el.querySelector('[data-delete]');
+        if (del) del.addEventListener('click', () => { m.close(); App.actions.deleteBill(b.id); });
+      },
+    });
+  }
+
+  /* ---------------- Money: monthly budget ---------------- */
+  function budget() {
+    const money = store().state.money;
+    const m = App.ui.modal({
+      title: T('Monthly budget'),
+      size: 'sm',
+      body: `
+        <form id="budgetForm" class="form" novalidate>
+          <p class="muted sm">${T('How much do you want to spend at most each month?')}</p>
+          ${amountField(money.budget)}
+        </form>`,
+      footer: `
+        ${money.budget ? `<button type="button" class="btn ghost danger-text" data-remove>${icon('trash', 16)}<span>${T('Remove')}</span></button>` : ''}
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-close>${T('Cancel')}</button>
+        <button type="submit" class="btn primary" form="budgetForm">${T('Save')}</button>`,
+      onMount(el) {
+        const form = el.querySelector('form');
+        form.addEventListener('submit', (ev) => {
+          ev.preventDefault();
+          const amount = Number(form.elements.amount.value);
+          if (!(amount > 0)) return fieldError(form, 'amount', T('Type the amount.'));
+          money.budget = amount;
+          store().save();
+          App.ui.toast(T('Budget saved'));
+          m.close();
+        });
+        const rm = el.querySelector('[data-remove]');
+        if (rm) rm.addEventListener('click', () => { money.budget = null; store().save(); m.close(); });
+      },
+    });
+  }
+
+  App.forms = { task, event, habit, goal, money, entry, bill, budget };
 })();

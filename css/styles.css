@@ -994,3 +994,125 @@ output { font-weight: 700; color: var(--primary); }
   padding: 12px 14px; background: var(--surface-2); line-height: 1.6;
 }
 .notes-box:focus { outline: none; border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 4px var(--primary-soft); }
+
+/* ---------- Money ---------- */
+.money-page { display: flex; flex-direction: column; gap: 18px; }
+.money-page .toolbar { margin-bottom: 0; }
+.money-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.m-tile { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px; }
+.m-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.m-tile.spent .m-label .ico { color: var(--danger); }
+.m-tile.received .m-label .ico { color: var(--success); }
+.m-tile.left .m-label .ico { color: var(--primary); }
+.m-tile strong { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.m-tile.left.neg strong { color: var(--danger); }
+.trend { font-size: 12px; color: var(--muted); }
+.trend.up { color: var(--danger); }
+.trend.down { color: var(--success); }
+
+.budget-card { display: flex; flex-direction: column; gap: 10px; }
+.budget-card.empty-budget { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.budget-head { display: flex; align-items: center; gap: 10px; }
+.budget-head strong { flex: 1; font-variant-numeric: tabular-nums; }
+.budget-pct { font-weight: 700; font-variant-numeric: tabular-nums; }
+.budget-bar { height: 12px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.budget-bar span { display: block; height: 100%; border-radius: inherit; background: var(--success); transition: width .3s; }
+.budget-card.near .budget-bar span { background: var(--warning); }
+.budget-card.over .budget-bar span { background: var(--danger); }
+.budget-line { display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.budget-card.ok .budget-line .ico { color: var(--success); }
+.budget-card.near .budget-line .ico { color: var(--warning); }
+.budget-card.over .budget-line { color: var(--danger); font-weight: 600; }
+
+.cb-icon {
+  display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 11px;
+  background: var(--surface-2); font-size: 19px; line-height: 1;
+}
+.cat-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.cat-bars li { display: flex; align-items: center; gap: 12px; }
+.cb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.cb-top { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.cb-top span { font-weight: 550; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-top strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cb-track { height: 8px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.cb-track span { display: block; height: 100%; border-radius: 99px; background: var(--primary); }
+.cat-bars li:first-child .cb-track span { background: var(--primary); }
+.cat-bars li:not(:first-child) .cb-track span { background: color-mix(in srgb, var(--primary) 65%, var(--surface)); }
+.cb-pct { width: 40px; text-align: end; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.bills-sum { margin: -4px 0 8px; }
+.bill-list, .pay-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.bill { display: flex; align-items: center; gap: 12px; padding: 10px 2px; }
+.bill + .bill { border-top: 1px solid var(--border); }
+.bill-main { flex: 1; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
+.bill-main strong { font-weight: 600; overflow-wrap: anywhere; }
+.bill-status { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.bill.soon .bill-status { color: var(--warning); font-weight: 600; }
+.bill.overdue .bill-status { color: var(--danger); font-weight: 600; }
+.bill.paid .bill-status { color: var(--success); }
+.bill.paid .bill-main strong, .bill.paid .bill-amount { color: var(--muted); }
+.bill-amount { font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.paid-btn { color: var(--success) !important; }
+
+.pay { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-radius: 12px; cursor: pointer; }
+.pay:hover { background: var(--surface-2); }
+.pay-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pay-main strong { font-weight: 600; overflow-wrap: anywhere; }
+.pay-main span { font-size: 12.5px; color: var(--muted); }
+.pay-amount { font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pay.in .pay-amount { color: var(--success); }
+.money-page .group-label span { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+.money-page .card-head select { height: 34px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); padding: 0 8px; max-width: 55%; }
+
+.trend-chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; align-items: end; height: 190px; margin-bottom: 10px; }
+.tc-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; cursor: pointer; min-width: 0; }
+.tc-val { font-size: 11.5px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; min-height: 16px; }
+.tc-track { flex: 1; width: 100%; max-width: 44px; display: flex; align-items: flex-end; border-bottom: 1px solid var(--border-strong); }
+.tc-track span { display: block; width: 100%; border-radius: 4px 4px 0 0; background: color-mix(in srgb, var(--primary) 40%, var(--surface)); transition: height .3s; }
+.tc-col.cur .tc-track span { background: var(--primary); }
+.tc-col:hover .tc-track span { background: color-mix(in srgb, var(--primary) 75%, var(--surface)); }
+.tc-label { font-size: 11.5px; color: var(--muted); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tc-col.cur .tc-label { color: var(--text); font-weight: 700; }
+.table-view { margin-top: 8px; font-size: 13px; }
+.table-view summary { cursor: pointer; color: var(--muted); }
+.table-view table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.table-view td { padding: 5px 2px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.table-view td:last-child { text-align: end; }
+
+.banner.bills { background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
+.banner.bills.late { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+
+/* Money forms */
+.money-type { display: flex; }
+.seg.out input:checked + span { color: var(--danger); }
+.seg.in input:checked + span { color: var(--success); }
+.amount-input { position: relative; display: flex; align-items: center; }
+.amount-input input { font-size: 22px !important; font-weight: 700; height: 54px !important; font-variant-numeric: tabular-nums; }
+.amount-input em { position: absolute; inset-inline-end: 14px; font-style: normal; font-weight: 600; color: var(--muted); pointer-events: none; }
+.cat-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.cat-opt { position: relative; cursor: pointer; }
+.cat-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.cat-opt span {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center;
+  min-height: 70px; padding: 8px 6px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface);
+  font-size: 12px; font-weight: 600; color: var(--text-2); line-height: 1.25;
+}
+.cat-opt span b { font-size: 22px; font-weight: 400; }
+.cat-opt input:checked + span { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.cat-opt input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+@media (max-width: 860px) {
+  .money-tiles { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .m-tile.left { grid-column: span 2; }
+  .m-tile { padding: 14px; }
+  .m-tile strong { font-size: 20px; }
+  .money-page .toolbar .hero-buttons { width: 100%; }
+  .money-page .toolbar .hero-buttons .btn { flex: 1; }
+  .bn-link span { font-size: 9.5px; }
+}
+/* Amounts always read left to right ("−25,000", "IQD 25,000"), also inside Kurdish text. */
+.pay-amount, .bill-amount, .m-tile strong, .money-page .group-label span, .cb-top strong, .budget-head strong, .money-sum strong,
+.money-list strong, .tc-val { direction: ltr; unicode-bidi: isolate; }
+.tc-label { white-space: normal; line-height: 1.25; overflow: visible; text-overflow: clip; }
+.amount-input input { -moz-appearance: textfield; appearance: textfield; padding-inline-end: 64px !important; }
+.amount-input input::-webkit-inner-spin-button, .amount-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }

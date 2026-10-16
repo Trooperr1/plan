@@ -139,6 +139,22 @@
           </div>
         </div>`);
     }
+    const bills = isToday ? App.money.dueSoon(2) : [];
+    if (bills.length) {
+      const one = bills.length === 1 ? bills[0] : null;
+      const when = (x) => (x.days < 0 ? T('late by {n} days', { n: -x.days }) : x.days === 0 ? T('today') : x.days === 1 ? T('tomorrow') : T('in {n} days', { n: x.days }));
+      out.push(`
+        <div class="banner bills ${bills.some((x) => x.days < 0) ? 'late' : ''}">
+          <span class="banner-icon">🧾</span>
+          <div>${one
+            ? `<strong>${T('{name} is due {when}', { name: U.esc(one.bill.name), when: when(one) })}</strong><span>${U.money(one.bill.amount)}</span>`
+            : `<strong>${T('{n} bills are due soon', { n: bills.length })}</strong><span>${bills.map((x) => U.esc(x.bill.name)).join(App.i18n.lang() === 'ckb' ? '، ' : ', ')}</span>`}</div>
+          <div class="banner-actions">
+            ${one ? `<button type="button" class="btn primary sm" data-action="pay-bill" data-id="${one.bill.id}" data-month="${one.due.slice(0, 7)}">${T('Pay')}</button>` : ''}
+            <a class="btn ${one ? 'ghost' : 'primary'} sm" href="#/money">${T('Open money')}</a>
+          </div>
+        </div>`);
+    }
     if (App.safety.backupDue()) {
       const last = st.meta.lastBackup;
       out.push(`

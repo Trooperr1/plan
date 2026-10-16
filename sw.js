@@ -1,5 +1,5 @@
 /* Service worker: offline support + notification clicks. Bump VERSION when files change. */
-const VERSION = 'planner-v5';
+const VERSION = 'planner-v6';
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const ASSETS = [
   './',
@@ -21,6 +21,7 @@ const ASSETS = [
   'js/reminders.js',
   'js/ics.js',
   'js/safety.js',
+  'js/money.js',
   'js/views/today.js',
   'js/views/calendar.js',
   'js/views/tasks.js',
@@ -28,6 +29,7 @@ const ASSETS = [
   'js/views/goals.js',
   'js/views/settings.js',
   'js/views/review.js',
+  'js/views/money.js',
   'js/main.js',
 ];
 

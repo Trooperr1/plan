@@ -131,6 +131,7 @@
       nextEvents += S.eventsOn(k).length;
     }
     const moneySum = r.money.reduce((s, m) => s + (Number(m.x.amount) || 0), 0);
+    const spentWeek = App.money.totals(App.money.entriesIn(start, end)).spent;
     const repeats = Object.values(r.repeats);
 
     const finished = [
@@ -159,6 +160,7 @@
               <li><strong>${r.events}</strong><span>${T('events')}</span></li>
               <li><strong>${r.steps.length}</strong><span>${T('goal steps done')}</span></li>
               ${moneySum ? `<li><strong>${U.money(moneySum)}</strong><span>${T('saved this week')}</span></li>` : ''}
+              ${spentWeek ? `<li><strong>${U.money(spentWeek)}</strong><span>${T('spent this week')}</span></li>` : ''}
               ${r.habitTotal ? `<li><strong>${Math.round((r.habitDone / r.habitTotal) * 100)}%</strong><span>${T('habits')}</span></li>` : ''}
             </ul>
           </div>

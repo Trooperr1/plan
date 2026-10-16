@@ -52,7 +52,8 @@
       const end = o.end && U.toMin(o.end) > U.toMin(o.start) ? o.end : U.fromMin(U.toMin(o.start) + 30);
       lines.push(`DTSTART:${day(date)}T${o.start.replace(':', '')}00`, `DTEND:${day(date)}T${end.replace(':', '')}00`);
     }
-    if (RRULE[o.repeat]) lines.push(`RRULE:${RRULE[o.repeat]}`);
+    if (o.rrule) lines.push(`RRULE:${o.rrule}`);
+    else if (RRULE[o.repeat]) lines.push(`RRULE:${RRULE[o.repeat]}`);
     if (o.location) lines.push(`LOCATION:${text(o.location)}`);
     if (o.notes) lines.push(`DESCRIPTION:${text(o.notes)}`);
     // Always ring: at the chosen reminder, at the start time, or 9 AM for all-day items.
@@ -104,5 +105,19 @@
     download(g.title, calendar(items));
   }
 
-  App.ics = { task, event, goal, calendar };
+  function bill(b) {
+    const M = App.money;
+    // First due date from today on.
+    let mk = M.thisMonth();
+    if (M.billDue(b, mk) < U.todayKey()) mk = M.addMonths(mk, 1);
+    // Days 29–31: "the largest of 28…day that exists" = the same rule the app uses.
+    const rrule = b.day > 28
+      ? `FREQ=MONTHLY;BYMONTHDAY=${Array.from({ length: b.day - 27 }, (_, i) => 28 + i).join(',')};BYSETPOS=-1`
+      : `FREQ=MONTHLY;BYMONTHDAY=${b.day}`;
+    download(b.name, calendar([{
+      uid: b.id, title: `🧾 ${b.name} · ${U.money(b.amount)}`, date: M.billDue(b, mk), allDay: true, rrule,
+    }]));
+  }
+
+  App.ics = { task, event, goal, bill, calendar };
 })();
