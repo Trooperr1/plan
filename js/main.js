@@ -4,6 +4,7 @@
   const U = App.util;
   const S = App.sched;
   const icon = (n, s) => App.icon(n, s);
+  const T = (x, v) => App.t(x, v);
 
   const ALL_NAV = [
     ['today', 'My Day', 'sun'],
@@ -19,9 +20,10 @@
   let current = null;
   const viewEl = document.getElementById('view');
 
+  const HIDDEN = ['review']; // pages reached from buttons, not the menu
   function routeFromHash() {
     const r = location.hash.replace(/^#\/?/, '').split('/')[0];
-    return nav().some(([id]) => id === r) ? r : 'today';
+    return nav().some(([id]) => id === r) || HIDDEN.includes(r) ? r : 'today';
   }
 
   /* ---------- Shared actions (used from any page) ---------- */
@@ -29,31 +31,31 @@
     async deleteTask(id) {
       const t = App.store.find('tasks', id);
       if (!t) return;
-      const msg = S.isRecurring(t) ? `Delete the repeating task “${t.title}” and all its future days?` : `Delete “${t.title}”?`;
+      const msg = S.isRecurring(t) ? T('Delete the repeating task “{name}” and all its days?', { name: t.title }) : T('Delete “{name}”?', { name: t.title });
       if (!(await App.ui.confirm(msg))) return;
       const r = App.store.remove('tasks', id);
-      App.ui.toast('Task deleted', { icon: 'trash', action: { label: 'Undo', fn: () => App.store.restore('tasks', r.item, r.index) } });
+      App.ui.toast(T('Task deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => App.store.restore('tasks', r.item, r.index) } });
     },
     async deleteEvent(id) {
       const ev = App.store.find('events', id);
       if (!ev) return;
-      if (!(await App.ui.confirm(`Delete the event “${ev.title}”${S.isRecurring(ev) ? ' and all its repeats' : ''}?`))) return;
+      if (!(await App.ui.confirm(T('Delete “{name}”?', { name: ev.title })))) return;
       const r = App.store.remove('events', id);
-      App.ui.toast('Event deleted', { icon: 'trash', action: { label: 'Undo', fn: () => App.store.restore('events', r.item, r.index) } });
+      App.ui.toast(T('Event deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => App.store.restore('events', r.item, r.index) } });
     },
     async deleteHabit(id) {
       const h = App.store.find('habits', id);
       if (!h) return;
-      if (!(await App.ui.confirm(`Delete the habit “${h.name}” and its history?`))) return;
+      if (!(await App.ui.confirm(T('Delete “{name}”?', { name: h.name })))) return;
       const r = App.store.remove('habits', id);
-      App.ui.toast('Habit deleted', { icon: 'trash', action: { label: 'Undo', fn: () => App.store.restore('habits', r.item, r.index) } });
+      App.ui.toast(T('Habit deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => App.store.restore('habits', r.item, r.index) } });
     },
     async deleteGoal(id) {
       const g = App.store.find('goals', id);
       if (!g) return;
-      if (!(await App.ui.confirm(`Delete the goal “${g.title}” and its milestones?`))) return;
+      if (!(await App.ui.confirm(T('Delete the goal “{name}” and its steps?', { name: g.title })))) return;
       const r = App.store.remove('goals', id);
-      App.ui.toast('Goal deleted', { icon: 'trash', action: { label: 'Undo', fn: () => App.store.restore('goals', r.item, r.index) } });
+      App.ui.toast(T('Goal deleted'), { icon: 'trash', action: { label: T('Undo'), fn: () => App.store.restore('goals', r.item, r.index) } });
     },
   };
 
@@ -62,9 +64,9 @@
     const before = list.map((t) => [t, t.date]);
     list.forEach((t) => { t.date = toKey; });
     App.store.save();
-    App.ui.toast(`Moved ${list.length} task${list.length === 1 ? '' : 's'} to ${label}`, {
+    App.ui.toast(T(label === 'today' ? 'Moved {n} tasks to today' : label === 'tomorrow' ? 'Moved {n} tasks to tomorrow' : 'Moved {n} tasks to next week', { n: list.length }), {
       icon: 'right',
-      action: { label: 'Undo', fn: () => { before.forEach(([t, d]) => { t.date = d; }); App.store.save(); } },
+      action: { label: T('Undo'), fn: () => { before.forEach(([t, d]) => { t.date = d; }); App.store.save(); } },
     });
   }
 
@@ -78,7 +80,7 @@
       App.store.save();
       if (val) {
         const s = S.dayStats(key);
-        if (s.total > 1 && s.done === s.total) App.ui.toast(`All ${s.total} tasks done for ${U.relDay(key).toLowerCase()}! 🎉`, { icon: 'trophy' });
+        if (s.total > 1 && s.done === s.total) App.ui.toast(T('All {n} tasks done! 🎉', { n: s.total }), { icon: 'trophy' });
       }
     },
     'toggle-sub'(a) {
@@ -102,11 +104,11 @@
       const h = App.store.find('habits', a.dataset.id);
       if (!h) return;
       const key = a.dataset.date || U.todayKey();
-      if (key > U.todayKey()) return App.ui.toast('You can only check in for today or earlier.', { icon: 'clock' });
+      if (key > U.todayKey()) return App.ui.toast(T('You can only check in for today or earlier.'), { icon: 'clock' });
       S.toggleHabit(h, key);
       App.store.save();
       const streak = S.streak(h);
-      if (S.habitDone(h, key) && key === U.todayKey() && streak > 1 && streak % 7 === 0) App.ui.toast(`${streak}-day streak on “${h.name}”! 🔥`, { icon: 'trophy' });
+      if (S.habitDone(h, key) && key === U.todayKey() && streak > 1 && streak % 7 === 0) App.ui.toast(T('{n}-day streak on “{name}”! 🔥', { n: streak, name: h.name }), { icon: 'trophy' });
     },
     'new-habit'() { App.forms.habit(); },
     'edit-habit'(a) { const h = App.store.find('habits', a.dataset.id); if (h) App.forms.habit(h); },
@@ -133,11 +135,24 @@
     'backup-now'() { App.safety.backup(); },
     'backup-later'() { App.safety.snoozeBackup(); },
     async 'install-app'() {
-      if (await App.safety.install()) App.ui.toast('App installed');
+      if (await App.safety.install()) App.ui.toast(T('App installed'));
       render();
     },
     'dismiss-install'() {
       App.store.state.meta.installTipDismissed = true;
+      App.store.save();
+    },
+    'review-move'(a) {
+      const { start, end } = a.dataset;
+      const today = U.todayKey();
+      const list = App.store.state.tasks.filter((t) => !S.isRecurring(t) && !t.done && t.date && t.date >= start && t.date <= end && t.date <= today);
+      const next = U.addDays(end, 1);
+      moveTasks(list, next >= today ? next : today, next >= today ? 'next week' : 'today');
+    },
+    'open-review'() { location.hash = '#/review'; },
+    'review-later'() {
+      const r = App.views.review.record(U.todayKey(), true);
+      r.later = true;
       App.store.save();
     },
     'open-day'(a, e) {
@@ -153,28 +168,28 @@
     const st = App.store.state;
     const items = nav();
     const links = items.map(([id, label, ic], i) => `
-      <a href="#/${id}" class="nav-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''} title="${label} (${i + 1})">
-        ${icon(ic, 19)}<span>${label}</span>${id === 'tasks' ? badge() : ''}</a>`).join('');
+      <a href="#/${id}" class="nav-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''} title="${T(label)} (${i + 1})">
+        ${icon(ic, 19)}<span>${T(label)}</span>${id === 'tasks' ? badge() : ''}</a>`).join('');
     document.getElementById('nav').innerHTML = links;
     const bottom = document.getElementById('bottomNav');
     bottom.style.gridTemplateColumns = `repeat(${items.length}, 1fr)`;
     bottom.innerHTML = items.map(([id, label, ic]) => `
-      <a href="#/${id}" class="bn-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''}>${icon(ic, 21)}<span>${SHORT[id] || label}</span></a>`).join('');
+      <a href="#/${id}" class="bn-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''}>${icon(ic, 21)}<span>${T(SHORT[id] || label)}</span></a>`).join('');
 
     const y = new Date().getFullYear();
     const pct = (U.dayOfYear(U.todayKey()) / U.daysInYear(y)) * 100;
     const today = S.dayStats(U.todayKey());
     document.getElementById('sidebarFoot').innerHTML = `
-      <div class="mini-stat"><span>Today</span><strong>${today.done}/${today.total} tasks</strong></div>
+      <div class="mini-stat"><span>${T('Today')}</span><strong>${T('{done}/{total} tasks', { done: today.done, total: today.total })}</strong></div>
       <div class="bar"><div style="width:${today.total ? (today.done / today.total) * 100 : 0}%"></div></div>
-      <div class="mini-stat"><span>${y}</span><strong>${pct.toFixed(0)}% passed</strong></div>
+      <div class="mini-stat"><span>${y}</span><strong>${T('{pct}% passed', { pct: pct.toFixed(0) })}</strong></div>
       <div class="bar year"><div style="width:${pct}%"></div></div>
-      ${st.settings.name ? `<p class="muted sm">Keep going, ${U.esc(st.settings.name)} 💪</p>` : ''}`;
+      ${st.settings.name ? `<p class="muted sm">${T('Keep going, {name} 💪', { name: U.esc(st.settings.name) })}</p>` : ''}`;
   }
 
   function badge() {
     const n = S.overdue(U.todayKey()).length;
-    return n ? `<em class="badge" title="${n} overdue">${n}</em>` : '';
+    return n ? `<em class="badge" title="${T('Overdue')}">${n}</em>` : '';
   }
 
   function render(opts) {
@@ -203,8 +218,9 @@
         try { if (sel && sel[0] != null) f.setSelectionRange(sel[0], sel[1]); } catch (e) { /* not a text input */ }
       }
     }
-    document.getElementById('pageTitle').textContent = view.title;
-    document.title = `${view.title} · Daily Planner`;
+    document.getElementById('pageTitle').textContent = T(view.title);
+    document.title = `${T(view.title)} · ${T('Daily Planner')}`;
+    App.i18n.apply();
     renderChrome();
   }
 
@@ -229,7 +245,7 @@
   let lastDay = U.todayKey();
   function tick() {
     const now = new Date();
-    document.getElementById('clock').textContent = `${now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} · ${U.fmtTime(`${U.pad(now.getHours())}:${U.pad(now.getMinutes())}`)}`;
+    document.getElementById('clock').textContent = `${U.fmtDate(U.todayKey(), { weekday: 'short', month: 'short', day: 'numeric' })} · ${U.fmtTime(`${U.pad(now.getHours())}:${U.pad(now.getMinutes())}`)}`;
     if (now.getMinutes() === lastMinute) return;
     lastMinute = now.getMinutes();
     const today = U.todayKey();
@@ -298,6 +314,7 @@
   App.applyTheme = applyTheme;
 
   App.store.load();
+  App.i18n.apply();
   applyTheme();
   App.store.on(() => {
     if (routeFromHash() !== current) location.hash = '#/' + routeFromHash();

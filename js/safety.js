@@ -47,7 +47,7 @@
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      App.ui.toast('Backup downloaded. Keep the file somewhere safe, like Google Drive or email.', { duration: 6000 });
+      App.ui.toast(App.t('Backup downloaded. Keep the file somewhere safe, like Google Drive or email.'), { duration: 6000 });
       App.store.save();
     },
 
@@ -68,7 +68,7 @@
 
     lastBackupText() {
       const t = App.store.state.meta.lastBackup;
-      return t ? U.agoDays(t) : 'never';
+      return t ? U.agoDays(t) : App.t('never');
     },
 
     showInstallTip() {

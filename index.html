@@ -11,26 +11,33 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="css/styles.css">
   <script>
-    // Apply the saved theme before first paint to avoid a light/dark flash.
+    // Apply the saved theme and language before first paint to avoid a flash.
     (function () {
-      var theme = 'system';
-      try { theme = (JSON.parse(localStorage.getItem('dailyPlanner.data.v2')) || {}).settings.theme || 'system'; } catch (e) {}
+      var s = {};
+      try { s = (JSON.parse(localStorage.getItem('dailyPlanner.data.v2')) || {}).settings || {}; } catch (e) {}
+      var theme = s.theme || 'system';
       var dark = theme === 'dark' || (theme === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
       document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      var lang = s.lang === 'en' ? 'en' : 'ckb';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
     })();
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#view">Skip to content</a>
+  <a class="skip-link" href="#view" data-t="Skip to content">Skip to content</a>
   <div class="app">
-    <aside class="sidebar" aria-label="Main navigation">
+    <aside class="sidebar" aria-label="Main navigation" data-t-aria="Main navigation">
       <div class="brand">
         <img src="icons/icon.svg" alt="" width="34" height="34">
         <div>
-          <strong>Daily Planner</strong>
-          <span>Plan · Do · Grow</span>
+          <strong data-t="Daily Planner">Daily Planner</strong>
+          <span data-t="Plan · Do · Grow">Plan · Do · Grow</span>
         </div>
       </div>
       <nav class="nav" id="nav"></nav>
@@ -44,24 +51,26 @@
           <span id="clock" class="clock"></span>
         </div>
         <div class="topbar-actions">
-          <button class="btn ghost" data-global="new-event" title="New event (E)">
-            <span data-icon="calendar"></span><span class="hide-sm">Event</span>
+          <button class="btn ghost" data-global="new-event" data-t-title="New event" title="New event">
+            <span data-icon="calendar"></span><span class="hide-sm" data-t="Event">Event</span>
           </button>
-          <button class="btn primary" data-global="new-task" title="New task (N)">
-            <span data-icon="plus"></span><span class="hide-sm">Task</span>
+          <button class="btn primary" data-global="new-task" data-t-title="New task" title="New task">
+            <span data-icon="plus"></span><span class="hide-sm" data-t="Task">Task</span>
           </button>
         </div>
       </header>
       <section id="view" class="view" tabindex="-1"></section>
     </main>
 
-    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation"></nav>
+    <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation" data-t-aria="Main navigation"></nav>
   </div>
 
   <div id="modalRoot"></div>
   <div id="toasts" class="toasts" aria-live="polite"></div>
 
   <script src="js/utils.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/lang-ckb.js"></script>
   <script src="js/icons.js"></script>
   <script src="js/store.js"></script>
   <script src="js/schedule.js"></script>
@@ -77,6 +86,7 @@
   <script src="js/views/habits.js"></script>
   <script src="js/views/goals.js"></script>
   <script src="js/views/settings.js"></script>
+  <script src="js/views/review.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

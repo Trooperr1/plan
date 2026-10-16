@@ -5,6 +5,7 @@
   const S = App.sched;
   const C = App.c;
   const icon = (n, s) => App.icon(n, s);
+  const T = (x, v) => App.t(x, v);
 
   const view = { title: 'My Day', date: null };
 
@@ -26,15 +27,16 @@
       category = cat.id;
       return ' ';
     });
-    title = title.replace(/\s(?:at\s+)?(\d{1,2})(?::([0-5]\d))?\s?(am|pm)(?=\s)/i, (m, h, mi, ap) => {
+    // "5pm", "at 5:30 pm", "کاتژمێر 5 د.ن" (د.ن = PM, پ.ن = AM)
+    title = title.replace(/\s(?:at\s+|کاتژمێر\s+)?(\d{1,2})(?::([0-5]\d))?\s?(am|pm|پ\.ن|د\.ن)(?=\s)/i, (m, h, mi, ap) => {
       h = Number(h);
       if (h < 1 || h > 12) return m;
-      h = (h % 12) + (ap.toLowerCase() === 'pm' ? 12 : 0);
+      h = (h % 12) + (/pm|د/i.test(ap) ? 12 : 0);
       time = `${U.pad(h)}:${mi || '00'}`;
       return ' ';
     });
     if (!time) {
-      title = title.replace(/\s(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)(?=\s)/, (m, h, mi) => {
+      title = title.replace(/\s(?:at\s+|کاتژمێر\s+)?([01]?\d|2[0-3]):([0-5]\d)(?=\s)/, (m, h, mi) => {
         time = `${U.pad(Number(h))}:${mi}`;
         return ' ';
       });
@@ -45,13 +47,13 @@
   function schedule(key, isToday) {
     const items = S.agenda(key);
     if (!items.length) {
-      return C.empty('calendar', 'Nothing scheduled', '',
-        `<button class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}Add event</button>`);
+      return C.empty('calendar', T('Nothing scheduled'), '',
+        `<button class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}${T('Add event')}</button>`);
     }
     const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
     let nowPlaced = !isToday;
     const rows = [];
-    const nowLine = `<li class="now-line" title="Now · ${U.fmtTime(U.fromMin(nowMin))}"><span>Now</span></li>`;
+    const nowLine = `<li class="now-line" title="${T('Now')} · ${U.fmtTime(U.fromMin(nowMin))}"><span>${T('Now')}</span></li>`;
     items.forEach((it) => {
       if (!nowPlaced && it.start && U.toMin(it.start) > nowMin) {
         rows.push(nowLine);
@@ -64,11 +66,11 @@
         const e = it.item;
         rows.push(`
           <li class="agenda-item ${live ? 'live' : ''} ${past ? 'past' : ''}" style="--c:${U.esc(cat.color)}" data-action="edit-event" data-id="${e.id}" role="button" tabindex="0">
-            <div class="agenda-time">${e.allDay ? 'All day' : `${U.fmtTime(e.start)}<small>${U.fmtTime(e.end)}</small>`}</div>
+            <div class="agenda-time">${e.allDay ? T('All day') : `${U.fmtTime(e.start)}<small>${U.fmtTime(e.end)}</small>`}</div>
             <div class="agenda-bar"></div>
             <div class="agenda-body">
               <strong>${U.esc(e.title)}</strong>
-              <span>${[e.location && U.esc(e.location), live && '<b class="live-tag">Now</b>'].filter(Boolean).join(' · ')}</span>
+              <span>${[e.location && U.esc(e.location), live && `<b class="live-tag">${T('Now')}</b>`].filter(Boolean).join(' · ')}</span>
             </div>
           </li>`);
       } else {
@@ -80,9 +82,9 @@
             <div class="agenda-bar"></div>
             <div class="agenda-body" data-action="edit-task" data-id="${t.id}" role="button" tabindex="0">
               <strong>${U.esc(t.title)}</strong>
-              <span>Task${done ? ' · Done' : ''}</span>
+              <span>${T('Task')}${done ? ` · ${T('Done')}` : ''}</span>
             </div>
-            <button type="button" class="check sm ${done ? 'on' : ''}" data-action="toggle-task" data-id="${t.id}" data-date="${key}" aria-label="Toggle done" aria-pressed="${done}">${icon('check', 12)}</button>
+            <button type="button" class="check sm ${done ? 'on' : ''}" data-action="toggle-task" data-id="${t.id}" data-date="${key}" aria-label="${T('Done')}" aria-pressed="${done}">${icon('check', 12)}</button>
           </li>`);
       }
     });
@@ -96,8 +98,8 @@
     return `
       <section class="card">
         <div class="card-head">
-          <h3>${icon('flame')} Habits</h3>
-          <a class="btn ghost sm" href="#/habits">View all</a>
+          <h3>${icon('flame')} ${T('Habits')}</h3>
+          <a class="btn ghost sm" href="#/habits">${T('View all')}</a>
         </div>
         ${st.habits.length ? `<div class="habit-chips">${st.habits.map((h) => {
           const on = S.habitDone(h, key);
@@ -105,7 +107,7 @@
           return `<button type="button" class="habit-chip ${on ? 'on' : ''}" style="--c:${U.esc(h.color)}" data-action="toggle-habit" data-id="${h.id}" data-date="${key}" aria-pressed="${on}">
             <span class="emoji">${U.esc(h.icon)}</span><span class="name">${U.esc(h.name)}</span>
             ${streak ? `<span class="streak">🔥${streak}</span>` : ''}<span class="tick">${icon('check', 12)}</span></button>`;
-        }).join('')}</div>` : C.empty('flame', 'No habits yet', '', `<button class="btn ghost sm" data-action="new-habit">${icon('plus', 14)}Add habit</button>`)}
+        }).join('')}</div>` : C.empty('flame', T('No habits yet'), '', `<button class="btn ghost sm" data-action="new-habit">${icon('plus', 14)}${T('Add habit')}</button>`)}
       </section>`;
   }
 
@@ -114,15 +116,26 @@
     const st = App.store.state;
     const out = [];
     const day = st.days[key] || {};
+    if (isToday && App.views.review.due()) {
+      out.push(`
+        <div class="banner review">
+          <span class="banner-icon">📅</span>
+          <div><strong>${T('Your Sunday review is ready')}</strong><span>${T('Take 5 minutes to see your week and plan what is next.')}</span></div>
+          <div class="banner-actions">
+            <button type="button" class="btn primary sm" data-action="open-review">${T('Open review')}</button>
+            <button type="button" class="btn ghost sm" data-action="review-later">${T('Later')}</button>
+          </div>
+        </div>`);
+    }
     const unfinished = tasks.filter((t) => !S.isRecurring(t) && !t.done);
     if (isToday && new Date().getHours() >= 18 && unfinished.length && !day.eveningDismissed) {
       out.push(`
         <div class="banner evening">
           <span class="banner-icon">🌙</span>
-          <div><strong>${unfinished.length} task${unfinished.length === 1 ? '' : 's'} not done today</strong><span>Move ${unfinished.length === 1 ? 'it' : 'them'} to tomorrow so nothing gets lost.</span></div>
+          <div><strong>${T('{n} tasks not done today', { n: unfinished.length })}</strong><span>${T('Move them to tomorrow so nothing gets lost.')}</span></div>
           <div class="banner-actions">
-            <button type="button" class="btn primary sm" data-action="move-tomorrow" data-date="${key}">Move to tomorrow</button>
-            <button type="button" class="btn ghost sm" data-action="dismiss-evening" data-date="${key}">Not now</button>
+            <button type="button" class="btn primary sm" data-action="move-tomorrow" data-date="${key}">${T('Move to tomorrow')}</button>
+            <button type="button" class="btn ghost sm" data-action="dismiss-evening" data-date="${key}">${T('Not now')}</button>
           </div>
         </div>`);
     }
@@ -131,20 +144,20 @@
       out.push(`
         <div class="banner backup">
           <span class="banner-icon">💾</span>
-          <div><strong>${last ? `Last backup: ${U.agoDays(last)}` : 'You have no backup yet'}</strong><span>Download a backup so your plans are safe if this phone is lost or reset.</span></div>
+          <div><strong>${last ? T('Last backup: {when}', { when: U.agoDays(last) }) : T('You have no backup yet')}</strong><span>${T('Download a backup so your plans are safe if this phone is lost or reset.')}</span></div>
           <div class="banner-actions">
-            <button type="button" class="btn primary sm" data-action="backup-now">Back up now</button>
-            <button type="button" class="btn ghost sm" data-action="backup-later">Later</button>
+            <button type="button" class="btn primary sm" data-action="backup-now">${T('Back up now')}</button>
+            <button type="button" class="btn ghost sm" data-action="backup-later">${T('Later')}</button>
           </div>
         </div>`);
     } else if (App.safety.showInstallTip() && window.matchMedia('(max-width: 860px)').matches) {
       out.push(`
         <div class="banner install">
           <span class="banner-icon">📲</span>
-          <div><strong>Add this app to your Home screen</strong><span>It opens faster, works offline and keeps your data safe.</span></div>
+          <div><strong>${T('Add this app to your Home screen')}</strong><span>${T('It opens faster, works offline and keeps your data safe.')}</span></div>
           <div class="banner-actions">
-            ${App.safety.installPrompt ? '<button type="button" class="btn primary sm" data-action="install-app">Install</button>' : `<a class="btn primary sm" href="#/settings">How?</a>`}
-            <button type="button" class="btn ghost sm" data-action="dismiss-install">Close</button>
+            ${App.safety.installPrompt ? `<button type="button" class="btn primary sm" data-action="install-app">${T('Install')}</button>` : `<a class="btn primary sm" href="#/settings">${T('How?')}</a>`}
+            <button type="button" class="btn ghost sm" data-action="dismiss-install">${T('Close')}</button>
           </div>
         </div>`);
     }
@@ -163,14 +176,14 @@
     if (!goals.length) return '';
     return `
       <section class="towards">
-        <span class="towards-label">${icon('flag', 14)} Working towards</span>
+        <span class="towards-label">${icon('flag', 14)} ${T('Working towards')}</span>
         <div class="towards-list">${goals.map((g) => {
           const c = App.store.category(g.category).color;
           const p = S.goalProgress(g);
           return `<button type="button" class="towards-goal" style="--c:${U.esc(c)}" data-action="open-goal" data-year="${g.year}">
             <strong>${U.esc(g.title)}</strong>
             <span class="bar"><span style="width:${p}%"></span></span>
-            <small>${p}% · ${S.goalDaysLeft(g)} days left</small></button>`;
+            <small>${p}% · ${T('{n} days left', { n: S.goalDaysLeft(g) })}</small></button>`;
         }).join('')}</div>
       </section>`;
   }
@@ -189,22 +202,23 @@
 
     const taskList = tasks.length
       ? tasks.map((t) => C.taskItem(t, key, { showSubs: true })).join('')
-      : C.empty('check', 'No tasks yet', 'Type a task below and press Add.');
+      : C.empty('check', T('No tasks yet'), T('Type a task below and press Add.'));
 
     return `
       <div class="today">
         <section class="card hero">
           <div class="hero-main">
             <div class="day-nav">
-              <button type="button" class="icon-btn" data-action="day-prev" aria-label="Previous day">${icon('left')}</button>
-              <button type="button" class="btn ghost sm" data-action="day-today" ${isToday ? 'disabled' : ''}>Today</button>
-              <button type="button" class="icon-btn" data-action="day-next" aria-label="Next day">${icon('right')}</button>
-              <label class="date-jump" title="Pick a date">${icon('calendar', 16)}<input type="date" id="dayJump" value="${key}" aria-label="Pick a date"></label>
+              <button type="button" class="icon-btn" data-action="day-prev" aria-label="${T('Previous day')}">${icon('left')}</button>
+              <button type="button" class="btn ghost sm" data-action="day-today" ${isToday ? 'disabled' : ''}>${T('Today')}</button>
+              <button type="button" class="icon-btn" data-action="day-next" aria-label="${T('Next day')}">${icon('right')}</button>
+              <label class="date-jump" title="${T('Pick a date')}">${icon('calendar', 16)}<input type="date" id="dayJump" value="${key}" aria-label="${T('Pick a date')}"></label>
+              <a class="btn ghost sm review-link" href="#/review">${icon('star', 14)}${T('Week review')}</a>
             </div>
             <h2>${heading}</h2>
             <p class="muted">${U.fmtDate(key, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
-          ${tasks.length ? `<div class="hero-stats">${C.progressRing(pct, 88, `${done} of ${tasks.length}`)}</div>` : ''}
+          ${tasks.length ? `<div class="hero-stats">${C.progressRing(pct, 88, T('{done} of {total}', { done, total: tasks.length }))}</div>` : ''}
         </section>
 
         ${banners(key, isToday, tasks)}
@@ -213,17 +227,17 @@
         <div class="today-cols">
           <div class="col">
             <section class="card">
-              <div class="card-head"><h3>${icon('list')} Tasks</h3></div>
+              <div class="card-head"><h3>${icon('list')} ${T('Tasks')}</h3></div>
               ${late.length ? `
-                <div class="group-label danger">${icon('alert', 14)} Overdue <span>${late.length}</span>
-                  <button type="button" class="btn ghost sm label-btn" data-action="move-overdue">Move all to today</button></div>
+                <div class="group-label danger">${icon('alert', 14)} ${T('Overdue')} <span>${late.length}</span>
+                  <button type="button" class="btn ghost sm label-btn" data-action="move-overdue">${T('Move all to today')}</button></div>
                 <div class="task-list">${late.map((t) => C.taskItem(t, t.date, { showDate: true })).join('')}</div>
-                <div class="group-label">${icon('sun', 14)} ${isToday ? 'Today' : U.relDay(key)}</div>` : ''}
+                <div class="group-label">${icon('sun', 14)} ${isToday ? T('Today') : U.relDay(key)}</div>` : ''}
               <div class="task-list">${taskList}</div>
               <form class="quick-add" data-quick>
                 <span>${icon('plus', 16)}</span>
-                <input type="text" id="quickAdd" placeholder="Add a task…" autocomplete="off" aria-label="Add a task">
-                <button type="submit" class="btn primary sm">Add</button>
+                <input type="text" id="quickAdd" placeholder="${T('Add a task…')}" autocomplete="off" aria-label="${T('Add a task…')}">
+                <button type="submit" class="btn primary sm">${T('Add')}</button>
               </form>
             </section>
           </div>
@@ -231,8 +245,8 @@
           <div class="col">
             <section class="card">
               <div class="card-head">
-                <h3>${icon('clock')} Schedule</h3>
-                <button type="button" class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}Event</button>
+                <h3>${icon('clock')} ${T('Schedule')}</h3>
+                <button type="button" class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}${T('Event')}</button>
               </div>
               ${schedule(key, isToday)}
             </section>
@@ -278,7 +292,7 @@
       category: parsed.category || App.store.defaultCategory(),
       reminder: parsed.time ? st.settings.defaultReminder : null,
     }));
-    App.ui.toast(`Added “${parsed.title}”${parsed.time ? ` at ${U.fmtTime(parsed.time)}` : ''}`);
+    App.ui.toast(parsed.time ? T('Added “{name}” at {time}', { name: parsed.title, time: U.fmtTime(parsed.time) }) : T('Added “{name}”', { name: parsed.title }));
     const again = document.getElementById('quickAdd');
     if (again) {
       again.value = '';

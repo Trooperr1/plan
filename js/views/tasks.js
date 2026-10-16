@@ -5,6 +5,7 @@
   const S = App.sched;
   const C = App.c;
   const icon = (n, s) => App.icon(n, s);
+  const T = (x, v) => App.t(x, v);
 
   const view = { title: 'Tasks', filter: 'today', q: '' };
 
@@ -34,8 +35,8 @@
     };
     switch (filter) {
       case 'today':
-        push('Overdue', null, S.overdue(today), { danger: true, showDate: true });
-        push('Today', today, S.tasksOn(today));
+        push(T('Overdue'), null, S.overdue(today), { danger: true, showDate: true });
+        push(T('Today'), today, S.tasksOn(today));
         break;
       case 'upcoming':
         for (let i = 1; i <= 14; i++) {
@@ -44,15 +45,15 @@
         }
         break;
       case 'completed':
-        push('Completed', null, st.tasks.filter((t) => !S.isRecurring(t) && t.done)
+        push(T('Done'), null, st.tasks.filter((t) => !S.isRecurring(t) && t.done)
           .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)), { showDate: true });
         break;
       default: {
-        push('Repeating', today, st.tasks.filter((t) => S.isRecurring(t)).sort(S.byTimeThenPrio), { showDate: false });
+        push(T('Repeating'), today, st.tasks.filter((t) => S.isRecurring(t)).sort(S.byTimeThenPrio), { showDate: false });
         const dated = st.tasks.filter((t) => !S.isRecurring(t) && t.date).sort((a, b) => a.date.localeCompare(b.date) || S.byTimeThenPrio(a, b));
-        push('Scheduled', null, dated.filter((t) => !t.done), { showDate: true });
-        push('No date', today, st.tasks.filter((t) => !t.date && !t.done));
-        push('Done', null, dated.filter((t) => t.done), { showDate: true });
+        push(T('Scheduled'), null, dated.filter((t) => !t.done), { showDate: true });
+        push(T('No date'), today, st.tasks.filter((t) => !t.date && !t.done));
+        push(T('Done'), null, dated.filter((t) => t.done), { showDate: true });
       }
     }
     return out;
@@ -71,9 +72,9 @@
       ? gs.map((g) => `
         <div class="group-label ${g.danger ? 'danger' : ''}">${U.esc(g.label)} <span>${g.tasks.length}</span></div>
         <div class="task-list">${g.tasks.map((t) => C.taskItem(t, g.key || t.date || U.todayKey(), { showDate: g.showDate, showSubs: true })).join('')}</div>`).join('')
-      : C.empty(filtered ? 'search' : 'check', filtered ? 'No matching tasks' : 'No tasks',
-        filtered ? 'Try a different word.' : 'Nothing here.',
-        `<button type="button" class="btn ghost sm" data-action="new-task">${icon('plus', 14)}New task</button>`);
+      : C.empty(filtered ? 'search' : 'check', filtered ? T('No matching tasks') : T('No tasks'),
+        filtered ? T('Try a different word.') : T('Nothing here.'),
+        `<button type="button" class="btn ghost sm" data-action="new-task">${icon('plus', 14)}${T('New task')}</button>`);
 
     return `
       <div class="tasks-page">
@@ -81,13 +82,13 @@
           ${FILTERS.map(([id, label, ic]) => {
             const n = id === 'all' || id === 'completed' ? '' : count(id);
             return `<button type="button" class="tab ${view.filter === id ? 'on' : ''}" data-action="filter" data-filter="${id}" role="tab" aria-selected="${view.filter === id}">
-              ${icon(ic, 15)}<span>${label}</span>${n ? `<em>${n}</em>` : ''}</button>`;
+              ${icon(ic, 15)}<span>${T(label)}</span>${n ? `<em>${n}</em>` : ''}</button>`;
           }).join('')}
         </div>
 
         <div class="filters">
-          <label class="search">${icon('search', 16)}<input type="search" id="taskSearch" placeholder="Search tasks…" value="${U.esc(view.q)}" aria-label="Search tasks"></label>
-          ${view.filter === 'completed' && total ? `<button type="button" class="btn ghost sm danger-text" data-action="clear-completed">${icon('trash', 14)}Clear completed</button>` : ''}
+          <label class="search">${icon('search', 16)}<input type="search" id="taskSearch" placeholder="${T('Search tasks…')}" value="${U.esc(view.q)}" aria-label="${T('Search tasks…')}"></label>
+          ${view.filter === 'completed' && total ? `<button type="button" class="btn ghost sm danger-text" data-action="clear-completed">${icon('trash', 14)}${T('Clear done tasks')}</button>` : ''}
         </div>
 
         <section class="card">${body}</section>
@@ -102,10 +103,10 @@
     } else if (a.dataset.action === 'clear-completed') {
       const st = App.store.state;
       const n = st.tasks.filter((t) => !S.isRecurring(t) && t.done).length;
-      if (await App.ui.confirm(`Delete ${n} completed task${n === 1 ? '' : 's'}? This cannot be undone.`, { okText: 'Delete all' })) {
+      if (await App.ui.confirm(T('Delete {n} done tasks? This cannot be undone.', { n }), { okText: T('Delete all') })) {
         st.tasks = st.tasks.filter((t) => S.isRecurring(t) || !t.done);
         App.store.save();
-        App.ui.toast('Completed tasks cleared');
+        App.ui.toast(T('Done tasks cleared'));
       }
     }
   };

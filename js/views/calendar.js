@@ -5,6 +5,7 @@
   const S = App.sched;
   const C = App.c;
   const icon = (n, s) => App.icon(n, s);
+  const T = (x, v) => App.t(x, v);
   const HOUR_PX = 48;
 
   const view = { title: 'Calendar', mode: 'month', cursor: null, selected: null };
@@ -25,6 +26,10 @@
     const e = U.addDays(s, 6);
     const sd = U.fromKey(s);
     const ed = U.fromKey(e);
+    if (App.i18n.lang() === 'ckb') {
+      if (sd.getMonth() === ed.getMonth()) return `${sd.getDate()} – ${ed.getDate()}ی ${U.MONTHS[ed.getMonth()]} ${ed.getFullYear()}`;
+      return `${sd.getDate()}ی ${U.MONTHS[sd.getMonth()]} – ${ed.getDate()}ی ${U.MONTHS[ed.getMonth()]} ${ed.getFullYear()}`;
+    }
     if (sd.getMonth() === ed.getMonth()) return `${U.MONTHS_SHORT[sd.getMonth()]} ${sd.getDate()} – ${ed.getDate()}, ${ed.getFullYear()}`;
     return `${U.MONTHS_SHORT[sd.getMonth()]} ${sd.getDate()} – ${U.MONTHS_SHORT[ed.getMonth()]} ${ed.getDate()}, ${ed.getFullYear()}`;
   }
@@ -45,12 +50,12 @@
         ...events.map((e) => `<span class="cal-chip ev" style="--c:${U.esc(App.store.category(e.category).color)}">${e.allDay ? '' : `<b>${U.fmtTime(e.start).replace(':00', '')}</b> `}${U.esc(e.title)}</span>`),
         ...tasks.map((t) => `<span class="cal-chip tk ${S.isDone(t, k) ? 'done' : ''}" style="--c:${U.esc(App.store.category(t.category).color)}">${U.esc(t.title)}</span>`),
       ];
-      const more = items.length > 3 ? `<span class="cal-more">+${items.length - 3} more</span>` : '';
+      const more = items.length > 3 ? `<span class="cal-more">${T('+{n} more', { n: items.length - 3 })}</span>` : '';
       const dots = [...events.slice(0, 3).map((e) => App.store.category(e.category).color), ...tasks.slice(0, 2).map(() => 'var(--muted)')]
         .map((c) => `<i style="background:${U.esc(c)}"></i>`).join('');
       cells.push(`
         <div class="cal-cell ${kd.getMonth() !== m ? 'out' : ''} ${k === today ? 'today' : ''} ${k === selected ? 'selected' : ''}"
-          data-action="select-day" data-date="${k}" role="gridcell" tabindex="0" aria-label="${U.fmtDate(k, { weekday: 'long', month: 'long', day: 'numeric' })}, ${items.length} items">
+          data-action="select-day" data-date="${k}" role="gridcell" tabindex="0" aria-label="${U.fmtDate(k, { weekday: 'long', month: 'long', day: 'numeric' })}, ${T('{n} items', { n: items.length })}">
           <span class="cal-num">${kd.getDate()}</span>
           <div class="cal-items">${items.slice(0, 3).join('')}${more}</div>
           <div class="cal-dots">${dots}</div>
@@ -139,7 +144,7 @@
     return `
       <div class="cal-week">
         <div class="wk-head"><span></span>${head}</div>
-        <div class="wk-allday"><span class="wk-label">All day</span>${allDay}</div>
+        <div class="wk-allday"><span class="wk-label">${T('All day')}</span>${allDay}</div>
         <div class="wk-scroll" id="weekScroll" data-keep-scroll>
           <div class="wk-grid" style="height:${24 * HOUR_PX}px;--hour:${HOUR_PX}px">
             <div class="wk-hours">${hours}</div>
@@ -160,16 +165,16 @@
             <h3>${U.esc(U.relDay(key))}</h3>
             <p class="muted sm">${U.fmtDate(key, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
           </div>
-          <a class="btn ghost sm" href="#/today" data-action="open-day" data-date="${key}">Open day</a>
+          <a class="btn ghost sm" href="#/today" data-action="open-day" data-date="${key}">${T('Open day')}</a>
         </div>
         <div class="panel-actions">
-          <button type="button" class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}Event</button>
-          <button type="button" class="btn ghost sm" data-action="new-task" data-date="${key}">${icon('plus', 14)}Task</button>
+          <button type="button" class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}${T('Event')}</button>
+          <button type="button" class="btn ghost sm" data-action="new-task" data-date="${key}">${icon('plus', 14)}${T('Task')}</button>
         </div>
-        <div class="group-label">${icon('calendar', 14)} Events <span>${events.length}</span></div>
-        ${events.length ? `<div class="event-list">${events.map((e) => C.eventItem(e)).join('')}</div>` : '<p class="muted sm pad">No events.</p>'}
-        <div class="group-label">${icon('list', 14)} Tasks <span>${st.done}/${st.total}</span></div>
-        ${tasks.length ? `<div class="task-list">${tasks.map((t) => C.taskItem(t, key)).join('')}</div>` : '<p class="muted sm pad">No tasks.</p>'}
+        <div class="group-label">${icon('calendar', 14)} ${T('Events')} <span>${events.length}</span></div>
+        ${events.length ? `<div class="event-list">${events.map((e) => C.eventItem(e)).join('')}</div>` : `<p class="muted sm pad">${T('No events.')}</p>`}
+        <div class="group-label">${icon('list', 14)} ${T('Tasks')} <span>${st.done}/${st.total}</span></div>
+        ${tasks.length ? `<div class="task-list">${tasks.map((t) => C.taskItem(t, key)).join('')}</div>` : `<p class="muted sm pad">${T('No tasks.')}</p>`}
       </aside>`;
   }
 
@@ -181,14 +186,14 @@
       <div class="calendar">
         <div class="toolbar">
           <div class="toolbar-left">
-            <button type="button" class="icon-btn" data-action="cal-prev" aria-label="Previous">${icon('left')}</button>
-            <button type="button" class="icon-btn" data-action="cal-next" aria-label="Next">${icon('right')}</button>
+            <button type="button" class="icon-btn" data-action="cal-prev" aria-label="${T('Previous')}">${icon('left')}</button>
+            <button type="button" class="icon-btn" data-action="cal-next" aria-label="${T('Next')}">${icon('right')}</button>
             <h2>${title(view.cursor)}</h2>
-            <button type="button" class="btn ghost sm" data-action="cal-today">Today</button>
+            <button type="button" class="btn ghost sm" data-action="cal-today">${T('Today')}</button>
           </div>
           <div class="segmented compact" role="tablist">
-            <button type="button" class="seg-btn ${view.mode === 'month' ? 'on' : ''}" data-action="cal-mode" data-mode="month" role="tab" aria-selected="${view.mode === 'month'}">${icon('grid', 15)}Month</button>
-            <button type="button" class="seg-btn ${view.mode === 'week' ? 'on' : ''}" data-action="cal-mode" data-mode="week" role="tab" aria-selected="${view.mode === 'week'}">${icon('columns', 15)}Week</button>
+            <button type="button" class="seg-btn ${view.mode === 'month' ? 'on' : ''}" data-action="cal-mode" data-mode="month" role="tab" aria-selected="${view.mode === 'month'}">${icon('grid', 15)}${T('Month')}</button>
+            <button type="button" class="seg-btn ${view.mode === 'week' ? 'on' : ''}" data-action="cal-mode" data-mode="week" role="tab" aria-selected="${view.mode === 'week'}">${icon('columns', 15)}${T('Week')}</button>
           </div>
         </div>
         <div class="cal-layout">

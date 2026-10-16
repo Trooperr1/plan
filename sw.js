@@ -1,5 +1,5 @@
 /* Service worker: offline support + notification clicks. Bump VERSION when files change. */
-const VERSION = 'planner-v3';
+const VERSION = 'planner-v4';
 const ASSETS = [
   './',
   'index.html',
@@ -9,6 +9,8 @@ const ASSETS = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'js/utils.js',
+  'js/i18n.js',
+  'js/lang-ckb.js',
   'js/icons.js',
   'js/store.js',
   'js/schedule.js',
@@ -24,6 +26,7 @@ const ASSETS = [
   'js/views/habits.js',
   'js/views/goals.js',
   'js/views/settings.js',
+  'js/views/review.js',
   'js/main.js',
 ];
 

@@ -26,6 +26,7 @@
       goals: [],
       days: {}, // per-day notes: { 'YYYY-MM-DD': { focus, notes, mood } }
       years: {}, // per-year info: { '2026': { theme } }
+      reviews: {}, // weekly reviews by week-end (Sunday) date: { notes, seen }
       notified: {}, // reminders already shown
       meta: { createdAt: Date.now(), lastBackup: null, backupSnooze: null, installTipDismissed: false },
       categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
@@ -39,6 +40,7 @@
         defaultReminder: 15,
         showHabits: false,
         currency: '',
+        lang: 'ckb',
       },
     };
   }
@@ -52,7 +54,7 @@
     ['tasks', 'events', 'habits', 'goals', 'categories'].forEach((k) => {
       if (!Array.isArray(out[k])) out[k] = base[k];
     });
-    ['days', 'years', 'notified'].forEach((k) => {
+    ['days', 'years', 'reviews', 'notified'].forEach((k) => {
       if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {};
     });
     out.tasks = out.tasks.map((t) => newTask(t));

@@ -11,7 +11,7 @@
       <div class="modal ${size || ''}" role="dialog" aria-modal="true" aria-label="${U.esc(title)}">
         <div class="modal-head">
           <h2>${U.esc(title)}</h2>
-          <button type="button" class="icon-btn" data-close aria-label="Close">${App.icon('x')}</button>
+          <button type="button" class="icon-btn" data-close aria-label="${App.t('Close')}">${App.icon('x')}</button>
         </div>
         <div class="modal-body">${body}</div>
         ${footer ? `<div class="modal-foot">${footer}</div>` : ''}
@@ -54,11 +54,11 @@
     return new Promise((resolve) => {
       let answered = false;
       const m = modal({
-        title: opts.title || 'Are you sure?',
+        title: opts.title || App.t('Are you sure?'),
         size: 'sm',
         body: `<p class="confirm-text">${U.esc(message)}</p>`,
-        footer: `<button type="button" class="btn ghost" data-close>Cancel</button>
-                 <button type="button" class="btn ${opts.danger === false ? 'primary' : 'danger'}" data-ok>${U.esc(opts.okText || 'Delete')}</button>`,
+        footer: `<button type="button" class="btn ghost" data-close>${App.t('Cancel')}</button>
+                 <button type="button" class="btn ${opts.danger === false ? 'primary' : 'danger'}" data-ok>${U.esc(opts.okText || App.t('Delete'))}</button>`,
         onMount(el) {
           el.querySelector('[data-ok]').addEventListener('click', () => {
             answered = true;
@@ -83,7 +83,7 @@
       <span class="toast-icon">${App.icon(opts.icon || (opts.type === 'danger' ? 'alert' : 'check'), 18)}</span>
       <div class="toast-msg">${opts.html ? message : U.esc(message)}</div>
       ${opts.action ? `<button type="button" class="btn sm ghost toast-action">${U.esc(opts.action.label)}</button>` : ''}
-      <button type="button" class="icon-btn sm toast-close" aria-label="Dismiss">${App.icon('x', 14)}</button>`;
+      <button type="button" class="icon-btn sm toast-close" aria-label="${App.t('Close')}">${App.icon('x', 14)}</button>`;
     const remove = () => {
       el.classList.add('leaving');
       setTimeout(() => el.remove(), 200);

@@ -7,13 +7,20 @@
   const MONTHS_SHORT = MONTHS.map((m) => m.slice(0, 3));
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const DAYS_SHORT = DAYS.map((d) => d.slice(0, 3));
+  const DAYS_MIN = DAYS.map((d) => d.slice(0, 2));
+  // Kurdish (Sorani) names, as used in the Kurdistan Region.
+  const KU_MONTHS = ['کانوونی دووەم', 'شوبات', 'ئازار', 'نیسان', 'ئایار', 'حوزەیران', 'تەممووز', 'ئاب', 'ئەیلوول', 'تشرینی یەکەم', 'تشرینی دووەم', 'کانوونی یەکەم'];
+  const KU_DAYS = ['یەکشەممە', 'دووشەممە', 'سێشەممە', 'چوارشەممە', 'پێنجشەممە', 'هەینی', 'شەممە'];
+  const KU_DAYS_SHORT = ['یەک', 'دوو', 'سێ', 'چوار', 'پێنج', 'هەینی', 'شەممە'];
+  const ku = () => App.i18n && App.i18n.lang() === 'ckb';
 
   const U = {
     pad,
-    MONTHS,
-    MONTHS_SHORT,
-    DAYS,
-    DAYS_SHORT,
+    get MONTHS() { return ku() ? KU_MONTHS : MONTHS; },
+    get MONTHS_SHORT() { return ku() ? KU_MONTHS : MONTHS_SHORT; },
+    get DAYS() { return ku() ? KU_DAYS : DAYS; },
+    get DAYS_SHORT() { return ku() ? KU_DAYS_SHORT : DAYS_SHORT; },
+    get DAYS_MIN() { return ku() ? KU_DAYS_SHORT : DAYS_MIN; },
 
     uid() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -76,28 +83,46 @@
       const clock = App.store && App.store.state ? App.store.state.settings.clock : '12';
       if (clock === '24') return t;
       let [h, m] = t.split(':').map(Number);
-      const ap = h >= 12 ? 'PM' : 'AM';
+      const ap = ku() ? (h >= 12 ? 'د.ن' : 'پ.ن') : h >= 12 ? 'PM' : 'AM';
       h = h % 12 || 12;
       return `${h}:${pad(m)} ${ap}`;
     },
     fmtHour(h) {
       const clock = App.store && App.store.state ? App.store.state.settings.clock : '12';
       if (clock === '24') return `${pad(h)}:00`;
-      return `${h % 12 || 12} ${h >= 12 ? 'PM' : 'AM'}`;
+      return `${h % 12 || 12} ${ku() ? (h >= 12 ? 'د.ن' : 'پ.ن') : h >= 12 ? 'PM' : 'AM'}`;
     },
     fmtDate(k, opts) {
-      return U.fromKey(k).toLocaleDateString(undefined, opts || { weekday: 'short', month: 'short', day: 'numeric' });
+      opts = opts || { weekday: 'short', month: 'short', day: 'numeric' };
+      if (!ku()) return U.fromKey(k).toLocaleDateString(undefined, opts);
+      // Kurdish: "هەینی، 16ی تشرینی یەکەم 2026"
+      const d = U.fromKey(k);
+      let out = '';
+      if (opts.day) out += `${d.getDate()}ی `;
+      if (opts.month) out += KU_MONTHS[d.getMonth()];
+      if (opts.year) out += ` ${d.getFullYear()}`;
+      out = out.trim();
+      if (opts.weekday) out = out ? `${KU_DAYS[d.getDay()]}، ${out}` : KU_DAYS[d.getDay()];
+      return out;
     },
     relDay(k) {
       const diff = U.diffDays(U.todayKey(), k);
-      if (diff === 0) return 'Today';
-      if (diff === 1) return 'Tomorrow';
-      if (diff === -1) return 'Yesterday';
+      const T = App.t || ((x) => x);
+      if (diff === 0) return T('Today');
+      if (diff === 1) return T('Tomorrow');
+      if (diff === -1) return T('Yesterday');
       const sameYear = k.slice(0, 4) === U.todayKey().slice(0, 4);
       return U.fmtDate(k, sameYear ? { weekday: 'short', month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
     },
     fmtDuration(ms) {
       const min = Math.round(ms / 60000);
+      if (ku()) {
+        if (min < 1) return 'ئێستا';
+        if (min < 60) return `${min} خولەک`;
+        const kh = Math.floor(min / 60);
+        if (kh < 24) return min % 60 ? `${kh} کاتژمێر و ${min % 60} خولەک` : `${kh} کاتژمێر`;
+        return `${Math.round(kh / 24)} ڕۆژ`;
+      }
       if (min < 1) return 'now';
       if (min < 60) return `${min} min`;
       const h = Math.floor(min / 60);
@@ -122,19 +147,21 @@
     },
     money(n) {
       const cur = App.store && App.store.state ? App.store.state.settings.currency : '';
-      const num = Math.round(Number(n) || 0).toLocaleString();
+      const num = Math.round(Number(n) || 0).toLocaleString('en-US');
       return cur ? `${cur} ${num}` : num;
     },
     agoDays(ms) {
       const d = Math.floor((Date.now() - ms) / 86400000);
+      if (ku()) return d <= 0 ? 'ئەمڕۆ' : d === 1 ? 'دوێنێ' : `${d} ڕۆژ لەمەوبەر`;
       return d <= 0 ? 'today' : d === 1 ? 'yesterday' : `${d} days ago`;
     },
     greeting() {
       const h = new Date().getHours();
-      if (h < 5) return 'Good night';
-      if (h < 12) return 'Good morning';
-      if (h < 17) return 'Good afternoon';
-      return 'Good evening';
+      const T = App.t || ((x) => x);
+      if (h < 5) return T('Good night');
+      if (h < 12) return T('Good morning');
+      if (h < 17) return T('Good afternoon');
+      return T('Good evening');
     },
   };
 

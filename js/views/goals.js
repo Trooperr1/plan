@@ -4,6 +4,7 @@
   const U = App.util;
   const C = App.c;
   const S = App.sched;
+  const T = (x, v) => App.t(x, v);
   const icon = (n, s) => App.icon(n, s);
 
   const view = { title: 'Goals', year: null };
@@ -30,21 +31,21 @@
       return `
         <div class="year-bar">
           <div class="bar big"><div style="width:${pct.toFixed(1)}%"></div></div>
-          <p class="muted sm">${pct.toFixed(0)}% of ${year} has passed · <strong>${total - day} days left</strong></p>
+          <p class="muted sm">${T('{pct}% of {year} has passed', { pct: pct.toFixed(0), year })} · <strong>${T('{n} days left', { n: total - day })}</strong></p>
         </div>`;
     }
     if (year > now) {
       const days = U.diffDays(U.todayKey(), `${year}-01-01`);
-      return `<p class="muted sm">${year} starts in ${days} days. Plan it now.</p>`;
+      return `<p class="muted sm">${T('{year} starts in {n} days. Plan it now.', { year, n: days })}</p>`;
     }
-    return `<p class="muted sm">${year} is finished.</p>`;
+    return `<p class="muted sm">${T('{year} is finished.', { year })}</p>`;
   }
 
   function roadmap(goals, year) {
     const todayPos = yearPos(U.todayKey(), year);
     const curMonth = new Date().getMonth();
     const monthHead = U.MONTHS_SHORT.map((m, i) => `<span class="${todayPos != null && curMonth === i ? 'cur' : ''}">${m}</span>`).join('');
-    const marker = todayPos != null ? `<div class="g-today" style="left:${todayPos}%"></div>` : '';
+    const marker = todayPos != null ? `<div class="g-today" style="--x:${todayPos}%"></div>` : '';
     const rows = goals.map((g) => {
       const c = App.store.category(g.category).color;
       const left = (g.startMonth / 12) * 100;
@@ -52,8 +53,8 @@
       const ms = g.milestones.map((m) => {
         const p = yearPos(m.date, year);
         if (p == null) return '';
-        return `<button type="button" class="g-ms ${m.done ? 'done' : ''}" style="left:${p}%;--c:${U.esc(c)}" data-action="toggle-ms" data-goal="${g.id}" data-ms="${m.id}"
-          title="${U.esc(m.title)} · ${U.fmtDate(m.date, { month: 'short', day: 'numeric' })}" aria-label="Step ${U.esc(m.title)}"></button>`;
+        return `<button type="button" class="g-ms ${m.done ? 'done' : ''}" style="--x:${p}%;--c:${U.esc(c)}" data-action="toggle-ms" data-goal="${g.id}" data-ms="${m.id}"
+          title="${U.esc(m.title)} · ${U.fmtDate(m.date, { month: 'short', day: 'numeric' })}" aria-label="${T('Step')}: ${U.esc(m.title)}"></button>`;
       }).join('');
       return `
         <div class="g-row">
@@ -62,7 +63,7 @@
           </div>
           <div class="g-track">
             ${marker}
-            <div class="g-bar" style="left:${left}%;width:${width}%;--c:${U.esc(c)}" data-action="edit-goal" data-id="${g.id}" title="${U.esc(g.title)} · ${S.goalProgress(g)}%">
+            <div class="g-bar" style="--x:${left}%;width:${width}%;--c:${U.esc(c)}" data-action="edit-goal" data-id="${g.id}" title="${U.esc(g.title)} · ${S.goalProgress(g)}%">
               <div class="g-fill" style="width:${S.goalProgress(g)}%"></div><span>${S.goalProgress(g)}%</span>
             </div>
             ${ms}
@@ -72,23 +73,23 @@
 
     return `
       <section class="card">
-        <div class="card-head"><h3>${icon('calendar')} ${year} at a glance</h3></div>
+        <div class="card-head"><h3>${icon('calendar')} ${T('{year} at a glance', { year })}</h3></div>
         <div class="gantt-scroll">
           <div class="gantt">
             <div class="g-row g-head"><div class="g-label"></div><div class="g-track g-months">${marker}${monthHead}</div></div>
             ${rows}
           </div>
         </div>
-        <div class="legend"><span><i class="lg-ms"></i>Step</span><span><i class="lg-ms done"></i>Done</span>${todayPos != null ? '<span><i class="lg-today"></i>Today</span>' : ''}</div>
+        <div class="legend"><span><i class="lg-ms"></i>${T('Step')}</span><span><i class="lg-ms done"></i>${T('Done')}</span>${todayPos != null ? `<span><i class="lg-today"></i>${T('Today')}</span>` : ''}</div>
       </section>`;
   }
 
   function countdown(g) {
     const left = S.goalDaysLeft(g);
-    if (S.goalProgress(g) >= 100) return 'Done 🎉';
-    if (left < 0) return 'Time is up';
-    if (left === 0) return 'Last day';
-    return `${left} day${left === 1 ? '' : 's'} left`;
+    if (S.goalProgress(g) >= 100) return T('Done 🎉');
+    if (left < 0) return T('Time is up');
+    if (left === 0) return T('Last day');
+    return T('{n} days left', { n: left });
   }
 
   function moneyBlock(g) {
@@ -97,9 +98,9 @@
     const pct = g.target ? U.clamp((saved / g.target) * 100, 0, 100) : 0;
     return `
       <button type="button" class="money-box" data-action="goal-money" data-id="${g.id}">
-        <span class="money-line"><span>${icon('target', 14)} Saved</span><strong>${U.money(saved)}${g.target ? ` <em>/ ${U.money(g.target)}</em>` : ''}</strong></span>
+        <span class="money-line"><span>${icon('target', 14)} ${T('Money saved')}</span><strong>${U.money(saved)}${g.target ? ` <em>/ ${U.money(g.target)}</em>` : ''}</strong></span>
         ${g.target ? `<span class="bar"><span style="width:${pct}%"></span></span>
-        <span class="muted sm">${saved >= g.target ? 'Target reached 🎉' : `${U.money(g.target - saved)} left`}</span>` : ''}
+        <span class="muted sm">${saved >= g.target ? T('Target reached 🎉') : T('{amount} left', { amount: U.money(g.target - saved) })}</span>` : ''}
       </button>`;
   }
 
@@ -118,28 +119,28 @@
             <h3>${U.esc(g.title)}</h3>
             <p class="muted sm">${U.MONTHS_SHORT[g.startMonth]} – ${U.MONTHS_SHORT[g.endMonth]} ${g.year} · <strong class="countdown">${countdown(g)}</strong></p>
           </div>
-          <button type="button" class="icon-btn" data-action="edit-goal" data-id="${g.id}" aria-label="Edit goal">${icon('edit', 16)}</button>
+          <button type="button" class="icon-btn" data-action="edit-goal" data-id="${g.id}" aria-label="${T('Edit goal')}">${icon('edit', 16)}</button>
         </div>
         <div class="goal-progress">
           <div class="bar"><div style="width:${progress}%"></div></div>
           <strong data-prog-label="${g.id}">${progress}%</strong>
         </div>
         ${g.milestones.length
-          ? `<p class="muted sm">${msDone} of ${g.milestones.length} steps done</p>`
-          : `<input type="range" min="0" max="100" step="5" value="${g.progress}" data-progress="${g.id}" aria-label="Progress for ${U.esc(g.title)}">`}
+          ? `<p class="muted sm">${T('{done} of {total} steps done', { done: msDone, total: g.milestones.length })}</p>`
+          : `<input type="range" min="0" max="100" step="5" value="${g.progress}" data-progress="${g.id}" aria-label="${T('Progress')}: ${U.esc(g.title)}">`}
         ${moneyBlock(g)}
         ${g.milestones.length ? `<ul class="ms-list">${g.milestones.map((m) => `
           <li class="${m.done ? 'done' : ''}">
-            <button type="button" class="mini-check ${m.done ? 'on' : ''}" style="--c:${U.esc(c)}" data-action="toggle-ms" data-goal="${g.id}" data-ms="${m.id}" aria-pressed="${m.done}" aria-label="Mark step done">${icon('check', 10)}</button>
+            <button type="button" class="mini-check ${m.done ? 'on' : ''}" style="--c:${U.esc(c)}" data-action="toggle-ms" data-goal="${g.id}" data-ms="${m.id}" aria-pressed="${m.done}" aria-label="${T('Done')}">${icon('check', 10)}</button>
             <span>${U.esc(m.title)}<small>${U.fmtDate(m.date, { month: 'short', day: 'numeric', year: 'numeric' })}</small></span>
           </li>`).join('')}</ul>` : ''}
-        ${open.length ? `<div class="goal-tasks"><span class="group-label">${icon('list', 13)} Next tasks</span>
+        ${open.length ? `<div class="goal-tasks"><span class="group-label">${icon('list', 13)} ${T('Next tasks')}</span>
           <div class="task-list">${open.map((t) => C.taskItem(t, t.date && t.date > today ? t.date : today, { showDate: true, hideGoal: true })).join('')}</div></div>` : ''}
         ${g.notes ? `<p class="goal-notes">${U.esc(g.notes)}</p>` : ''}
         <div class="goal-actions">
-          <button type="button" class="btn ghost sm" data-action="new-task" data-goal="${g.id}">${icon('plus', 14)}Task</button>
-          <button type="button" class="btn ghost sm" data-action="goal-money" data-id="${g.id}">${icon('target', 14)}Money</button>
-          <button type="button" class="btn ghost sm" data-action="goal-ics" data-id="${g.id}" title="Add steps to phone calendar">${icon('bell', 14)}Phone calendar</button>
+          <button type="button" class="btn ghost sm" data-action="new-task" data-goal="${g.id}">${icon('plus', 14)}${T('Task')}</button>
+          <button type="button" class="btn ghost sm" data-action="goal-money" data-id="${g.id}">${icon('target', 14)}${T('Money')}</button>
+          <button type="button" class="btn ghost sm" data-action="goal-ics" data-id="${g.id}" title="${T('Add to phone calendar')}">${icon('bell', 14)}${T('Phone calendar')}</button>
         </div>
       </section>`;
   }
@@ -153,7 +154,7 @@
 
     return `
       <div class="timeline-page">
-        <div class="year-chips" role="tablist" aria-label="Year">
+        <div class="year-chips" role="tablist" aria-label="${T('Year')}">
           ${years().map((y) => `
             <button type="button" class="tab ${y === year ? 'on' : ''}" data-action="pick-year" data-year="${y}" role="tab" aria-selected="${y === year}">
               ${y}${counts[y] ? `<em>${counts[y]}</em>` : ''}</button>`).join('')}
@@ -161,16 +162,19 @@
 
         <section class="card year-hero">
           <div class="year-hero-main">
-            <h2>Goals for ${year}</h2>
+            <h2>${T('Goals for {year}', { year })}</h2>
             ${yearInfo(year)}
           </div>
-          <button type="button" class="btn primary" data-action="new-goal">${icon('plus', 16)}Add goal</button>
+          <div class="hero-buttons">
+            <button type="button" class="btn primary" data-action="new-goal">${icon('plus', 16)}${T('Add goal')}</button>
+            <a class="btn ghost" href="#/review">${icon('star', 16)}${T('Week review')}</a>
+          </div>
         </section>
 
         ${goals.length
           ? `<div class="goal-grid">${goals.map(goalCard).join('')}</div>${roadmap(goals, year)}`
-          : `<section class="card">${C.empty('flag', `No goals for ${year} yet`, 'Add a big goal and the steps to reach it.',
-              `<button type="button" class="btn primary sm" data-action="new-goal">${icon('plus', 14)}Add goal</button>`)}</section>`}
+          : `<section class="card">${C.empty('flag', T('No goals for {year} yet', { year }), T('Add a big goal and the steps to reach it.'),
+              `<button type="button" class="btn primary sm" data-action="new-goal">${icon('plus', 14)}${T('Add goal')}</button>`)}</section>`}
       </div>`;
   };
 
@@ -190,8 +194,9 @@
         const m = g && g.milestones.find((x) => x.id === a.dataset.ms);
         if (!m) return;
         m.done = !m.done;
+        m.doneAt = m.done ? Date.now() : null;
         App.store.save();
-        if (m.done) App.ui.toast(S.goalProgress(g) >= 100 ? `Goal complete: ${g.title}! 🏆` : `Step done: ${m.title} 🎉`, { icon: 'trophy' });
+        if (m.done) App.ui.toast(S.goalProgress(g) >= 100 ? T('Goal complete: {name}! 🏆', { name: g.title }) : T('Step done: {name} 🎉', { name: m.title }), { icon: 'trophy' });
         break;
       }
       default:
@@ -213,7 +218,7 @@
   view.onChange = function (e) {
     if (e.target.dataset.progress) {
       App.store.save();
-      if (Number(e.target.value) === 100) App.ui.toast('Goal complete! Amazing work 🏆', { icon: 'trophy' });
+      if (Number(e.target.value) === 100) App.ui.toast(T('Goal complete! Amazing work 🏆'), { icon: 'trophy' });
     }
   };
 

@@ -69,7 +69,7 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
-    App.ui.toast('Calendar file downloaded. Open it and tap “Add” to put it in your phone calendar.', { icon: 'calendar', duration: 7000 });
+    App.ui.toast(App.t('Calendar file downloaded. Open it and tap “Add” to put it in your phone calendar.'), { icon: 'calendar', duration: 7000 });
   }
 
   function task(t) {
@@ -90,7 +90,7 @@
     const steps = g.milestones.filter((m) => !m.done);
     const items = steps.length
       ? steps.map((m) => ({ uid: m.id, title: `${m.title} (${g.title})`, date: m.date, allDay: true }))
-      : [{ uid: g.id, title: `Goal deadline: ${g.title}`, date: S.goalEnd(g), allDay: true }];
+      : [{ uid: g.id, title: App.t('Goal deadline: {name}', { name: g.title }), date: S.goalEnd(g), allDay: true }];
     download(g.title, calendar(items));
   }
 

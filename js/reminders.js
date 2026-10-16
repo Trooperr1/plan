@@ -72,9 +72,11 @@
   function describe(r) {
     const when = r.at - Date.now();
     const time = U.fmtTime(r.kind === 'task' ? r.item.time : r.item.start);
+    const T = App.t;
     const day = r.key === U.todayKey() ? '' : `${U.relDay(r.key)} `;
-    if (when <= 0) return `${r.kind === 'task' ? 'Task' : 'Event'} · ${day}${time} (started)`;
-    return `${r.kind === 'task' ? 'Task' : 'Event'} · ${day}${time} · in ${U.fmtDuration(when)}`;
+    const kind = r.kind === 'task' ? T('Task') : T('Event');
+    if (when <= 0) return `${kind} · ${day}${time} (${T('started')})`;
+    return `${kind} · ${day}${time} · ${T('in {time}', { time: U.fmtDuration(when) })}`;
   }
 
   function check() {
@@ -88,6 +90,14 @@
       changed = true;
       fire(r.item.title, describe(r), id);
     });
+    // Sunday evening: remind about the weekly review once.
+    const today = U.todayKey();
+    const hour = new Date().getHours();
+    if (U.weekday(today) === 0 && hour >= 18 && App.views.review && App.views.review.due() && !state.notified[`review:${today}`]) {
+      state.notified[`review:${today}`] = today;
+      changed = true;
+      fire(App.t('Sunday review'), App.t('Take 5 minutes to see your week and plan what is next.'), 'review');
+    }
     // Forget reminder history older than a week.
     const cutoff = U.addDays(U.todayKey(), -7);
     Object.keys(state.notified).forEach((k) => {
@@ -101,13 +111,13 @@
 
   async function requestPermission() {
     if (!('Notification' in window)) {
-      App.ui.toast('This browser does not support notifications. In-app reminders will still work.', { type: 'danger', duration: 6000 });
+      App.ui.toast(App.t('This browser does not support notifications. In-app reminders will still work.'), { type: 'danger', duration: 6000 });
       return false;
     }
     let p = Notification.permission;
     if (p === 'default') p = await Notification.requestPermission();
     if (p !== 'granted') {
-      App.ui.toast('Notifications are blocked. Allow them in your browser site settings.', { type: 'danger', duration: 6000 });
+      App.ui.toast(App.t('Notifications are blocked. Allow them in your browser site settings.'), { type: 'danger', duration: 6000 });
       return false;
     }
     return true;
