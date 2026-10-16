@@ -389,8 +389,8 @@
           g.milestones = msEd.collect().filter((x) => x.title.trim())
             .map((x) => ({ id: x.id, title: x.title.trim(), date: x.date || `${yr}-${U.pad(em + 1)}-15`, done: !!x.done, doneAt: x.done ? x.doneAt || Date.now() : null }))
             .sort((a, b) => a.date.localeCompare(b.date));
+          if (App.views.goals) App.views.goals.showYear(g.year); // before saving, so the redraw shows this year
           store().upsert('goals', g);
-          if (App.views.goals) App.views.goals.showYear(g.year);
           App.ui.toast(isNew ? T('Goal added to {year}', { year: g.year }) : T('Goal saved'));
           m.close();
         });

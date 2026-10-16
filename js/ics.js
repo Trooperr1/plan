@@ -16,14 +16,24 @@
     return String(s || '').replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
   }
 
-  // Lines longer than 75 characters must be folded (RFC 5545).
+  // Lines longer than 75 bytes must be folded (RFC 5545). Kurdish letters and emoji take several
+  // bytes each, so count bytes and never cut a letter in half.
+  const bytes = (ch) => new TextEncoder().encode(ch).length;
   function fold(line) {
     const out = [];
-    while (line.length > 74) {
-      out.push(line.slice(0, 74));
-      line = ' ' + line.slice(74);
+    let cur = '';
+    let size = 0;
+    for (const ch of line) {
+      const b = bytes(ch);
+      if (size + b > 74) {
+        out.push(cur);
+        cur = ' ';
+        size = 1;
+      }
+      cur += ch;
+      size += b;
     }
-    out.push(line);
+    out.push(cur);
     return out.join('\r\n');
   }
 

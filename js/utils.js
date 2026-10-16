@@ -94,7 +94,7 @@
     },
     fmtDate(k, opts) {
       opts = opts || { weekday: 'short', month: 'short', day: 'numeric' };
-      if (!ku()) return U.fromKey(k).toLocaleDateString(undefined, opts);
+      if (!ku()) return U.fromKey(k).toLocaleDateString(/^en\b/i.test(navigator.language || '') ? navigator.language : 'en-US', opts);
       // Kurdish: "هەینی، 16ی تشرینی یەکەم 2026"
       const d = U.fromKey(k);
       let out = '';

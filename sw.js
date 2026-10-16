@@ -1,5 +1,6 @@
 /* Service worker: offline support + notification clicks. Bump VERSION when files change. */
-const VERSION = 'planner-v4';
+const VERSION = 'planner-v5';
+const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const ASSETS = [
   './',
   'index.html',
@@ -45,7 +46,20 @@ self.addEventListener('activate', (event) => {
 // Network first (so updates show up), falling back to the cache when offline.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  // The Kurdish font: keep a copy so the app looks right offline.
+  if (FONT_HOSTS.includes(url.hostname)) {
+    event.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(VERSION).then((cache) => cache.put(req, copy));
+        return res;
+      }))
+    );
+    return;
+  }
+  if (url.origin !== self.location.origin) return;
   event.respondWith(
     fetch(req)
       .then((res) => {

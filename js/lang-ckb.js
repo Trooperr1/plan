@@ -6,6 +6,7 @@ window.App.dictCkb = {
   'Plan · Do · Grow': 'پلان · کار · گەشە',
   'Skip to content': 'بڕۆ بۆ ناوەڕۆک',
   'Main navigation': 'لیستی سەرەکی',
+  'Could not save. Browser storage is full or blocked. Download a backup from Settings.': 'پاشەکەوت نەکرا. بیرگەی وێبگەڕ پڕە یان داخراوە. لە ڕێکخستنەکانەوە کۆپی یەدەگ دابگرە.',
   'My Day': 'ڕۆژەکەم',
   'Calendar': 'ڕۆژژمێر',
   'Tasks': 'ئەرکەکان',

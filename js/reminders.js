@@ -56,7 +56,8 @@
     const fallback = () => {
       try { new Notification(title, options); } catch (e) { /* some mobile browsers only allow SW notifications */ }
     };
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    // Android only shows notifications through the service worker, so prefer it.
+    if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then((reg) => (reg ? reg.showNotification(title, options) : fallback())).catch(fallback);
     } else {
       fallback();
@@ -86,6 +87,8 @@
     instances(now - GRACE_MS, now).forEach((r) => {
       const id = `${r.kind}:${r.item.id}:${r.key}:${r.item.reminder}`;
       if (state.notified[id]) return;
+      // Added or changed well after its reminder time had passed: nothing was missed.
+      if ((r.item.updatedAt || r.item.createdAt || 0) > r.fireAt + 60000) return;
       state.notified[id] = r.key;
       changed = true;
       fire(r.item.title, describe(r), id);

@@ -239,7 +239,7 @@
         if (sel.getMonth() !== cur.getMonth()) view.cursor = view.selected;
       }
       App.render();
-      if (window.matchMedia('(max-width: 1080px)').matches) {
+      if (window.matchMedia('(max-width: 1180px)').matches) {
         const panel = document.querySelector('.day-panel');
         if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }

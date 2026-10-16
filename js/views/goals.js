@@ -110,8 +110,9 @@
     const progress = S.goalProgress(g);
     const today = U.todayKey();
     const tasks = App.store.state.tasks.filter((t) => t.goalId === g.id);
-    const open = tasks.filter((t) => !S.isDone(t, t.date && t.date > today ? t.date : today))
-      .sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')).slice(0, 3);
+    const dayOf = (t) => (S.isRecurring(t) ? S.nextOccurrence(t, today) || today : t.date || today);
+    const open = tasks.filter((t) => !S.isDone(t, dayOf(t)))
+      .sort((a, b) => dayOf(a).localeCompare(dayOf(b))).slice(0, 3);
     return `
       <section class="card goal-card" style="--c:${U.esc(c)}">
         <div class="goal-head">
@@ -135,7 +136,7 @@
             <span>${U.esc(m.title)}<small>${U.fmtDate(m.date, { month: 'short', day: 'numeric', year: 'numeric' })}</small></span>
           </li>`).join('')}</ul>` : ''}
         ${open.length ? `<div class="goal-tasks"><span class="group-label">${icon('list', 13)} ${T('Next tasks')}</span>
-          <div class="task-list">${open.map((t) => C.taskItem(t, t.date && t.date > today ? t.date : today, { showDate: true, hideGoal: true })).join('')}</div></div>` : ''}
+          <div class="task-list">${open.map((t) => C.taskItem(t, dayOf(t), { showDate: true, hideGoal: true })).join('')}</div></div>` : ''}
         ${g.notes ? `<p class="goal-notes">${U.esc(g.notes)}</p>` : ''}
         <div class="goal-actions">
           <button type="button" class="btn ghost sm" data-action="new-task" data-goal="${g.id}">${icon('plus', 14)}${T('Task')}</button>

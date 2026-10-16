@@ -660,7 +660,7 @@ input[type="color"] { width: 38px; height: 38px; flex: none; padding: 3px; borde
 input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 7px; }
 .shortcuts { list-style: none; padding: 0; margin: 0 0 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 14px; }
-.shortcuts kbd { margin-right: 4px; }
+.shortcuts kbd { margin-inline-end: 4px; }
 
 .switch { position: relative; display: inline-block; width: 46px; height: 26px; flex: none; }
 .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
@@ -809,7 +809,7 @@ output { font-weight: 700; color: var(--primary); }
   .cal-weekdays span { text-align: center; padding: 4px 0 8px; font-size: 11px; }
   .wk-head, .wk-allday, .wk-grid { grid-template-columns: 40px repeat(7, minmax(0, 1fr)); }
   .wk-day strong { font-size: 15px; width: 28px; height: 28px; }
-  .wk-hours span { font-size: 9.5px; right: 4px; }
+  .wk-hours span { font-size: 9.5px; inset-inline-end: 4px; }
   .wk-block { padding: 2px 3px; font-size: 10px; }
   .wk-block span { display: none; }
   .wk-allday-cell .cal-chip { font-size: 9.5px; padding: 1px 3px; }

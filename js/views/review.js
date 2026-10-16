@@ -111,7 +111,6 @@
   }
 
   view.render = function () {
-    const st = App.store.state;
     const latest = lastSunday();
     const end = view.end && view.end < latest ? view.end : latest;
     const start = U.addDays(end, -6);

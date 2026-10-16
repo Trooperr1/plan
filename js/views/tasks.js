@@ -49,7 +49,8 @@
           .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)), { showDate: true });
         break;
       default: {
-        push(T('Repeating'), today, st.tasks.filter((t) => S.isRecurring(t)).sort(S.byTimeThenPrio), { showDate: false });
+        // Repeating tasks are ticked for the next day they happen.
+        push(T('Repeating'), today, st.tasks.filter((t) => S.isRecurring(t)).sort(S.byTimeThenPrio), { showDate: false, next: true });
         const dated = st.tasks.filter((t) => !S.isRecurring(t) && t.date).sort((a, b) => a.date.localeCompare(b.date) || S.byTimeThenPrio(a, b));
         push(T('Scheduled'), null, dated.filter((t) => !t.done), { showDate: true });
         push(T('No date'), today, st.tasks.filter((t) => !t.date && !t.done));
@@ -71,7 +72,7 @@
     const body = gs.length
       ? gs.map((g) => `
         <div class="group-label ${g.danger ? 'danger' : ''}">${U.esc(g.label)} <span>${g.tasks.length}</span></div>
-        <div class="task-list">${g.tasks.map((t) => C.taskItem(t, g.key || t.date || U.todayKey(), { showDate: g.showDate, showSubs: true })).join('')}</div>`).join('')
+        <div class="task-list">${g.tasks.map((t) => C.taskItem(t, g.next ? S.nextOccurrence(t, U.todayKey()) || U.todayKey() : g.key || t.date || U.todayKey(), { showDate: g.showDate, showSubs: true })).join('')}</div>`).join('')
       : C.empty(filtered ? 'search' : 'check', filtered ? T('No matching tasks') : T('No tasks'),
         filtered ? T('Try a different word.') : T('Nothing here.'),
         `<button type="button" class="btn ghost sm" data-action="new-task">${icon('plus', 14)}${T('New task')}</button>`);

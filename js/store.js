@@ -45,22 +45,132 @@
     };
   }
 
+  /* ---- Cleaning: saved data and imported backups may be old, broken or hand-edited.
+     Every value is checked so the app never shows (or runs) something unexpected. ---- */
+  const RE_ID = /^[\w-]{1,64}$/;
+  const RE_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  const RE_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const RE_COLOR = /^#[0-9a-f]{3,8}$/i;
+  const REPEAT_KEYS = ['none', 'daily', 'weekdays', 'weekly', 'monthly', 'yearly'];
+  const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+  const id = (v) => (typeof v === 'string' && RE_ID.test(v) ? v : U.uid());
+  const str = (v, max) => (v == null ? '' : String(v)).slice(0, max || 2000);
+  const date = (v, fallback) => (typeof v === 'string' && RE_DATE.test(v) ? v : fallback);
+  const time = (v, fallback) => (typeof v === 'string' && RE_TIME.test(v) ? v : fallback);
+  const color = (v, fallback) => (typeof v === 'string' && RE_COLOR.test(v) ? v : fallback);
+  const oneOf = (v, list, fallback) => (list.includes(v) ? v : fallback);
+  const num = (v, fallback) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? fallback : Number(v));
+  const int = (v, lo, hi, fallback) => {
+    const n = num(v, null);
+    if (n === null) return fallback;
+    return Math.min(hi, Math.max(lo, Math.round(n)));
+  };
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const dateMap = (v) => {
+    const out = {};
+    if (isObj(v)) Object.keys(v).forEach((k) => { if (RE_DATE.test(k) && v[k]) out[k] = true; });
+    return out;
+  };
+  const catId = (v) => (typeof v === 'string' && RE_ID.test(v) ? v : defaultCategory());
+  const reminder = (v) => (v == null || v === '' ? null : int(v, 0, 10080, null));
+
+  function cleanTask(raw) {
+    const t = newTask(isObj(raw) ? raw : {});
+    t.id = id(t.id);
+    t.title = str(t.title, 200);
+    t.notes = str(t.notes);
+    t.date = date(t.date, null);
+    t.time = time(t.time, null);
+    t.priority = oneOf(t.priority, ['low', 'medium', 'high'], 'medium');
+    t.repeat = oneOf(t.repeat, REPEAT_KEYS, 'none');
+    if (t.repeat !== 'none' && !t.date) t.date = U.todayKey();
+    t.reminder = reminder(t.reminder);
+    t.category = catId(t.category);
+    t.done = !!t.done;
+    t.completedAt = num(t.completedAt, null);
+    t.doneDates = dateMap(t.doneDates);
+    t.subtasks = arr(t.subtasks).filter(isObj).map((x) => ({ id: id(x.id), title: str(x.title, 200), done: !!x.done }));
+    t.goalId = typeof t.goalId === 'string' && RE_ID.test(t.goalId) ? t.goalId : null;
+    return t;
+  }
+
+  function cleanEvent(raw) {
+    const e = newEvent(isObj(raw) ? raw : {});
+    e.id = id(e.id);
+    e.title = str(e.title, 200);
+    e.notes = str(e.notes);
+    e.location = str(e.location, 200);
+    e.date = date(e.date, U.todayKey());
+    e.start = time(e.start, '09:00');
+    e.end = time(e.end, U.fromMin(U.toMin(e.start) + 60));
+    e.allDay = !!e.allDay;
+    e.repeat = oneOf(e.repeat, REPEAT_KEYS, 'none');
+    e.reminder = reminder(e.reminder);
+    e.category = catId(e.category);
+    return e;
+  }
+
+  function cleanHabit(raw) {
+    const h = newHabit(isObj(raw) ? raw : {});
+    h.id = id(h.id);
+    h.name = str(h.name, 80);
+    h.icon = str(h.icon, 8) || '⭐';
+    h.color = color(h.color, '#6366f1');
+    h.log = dateMap(h.log);
+    return h;
+  }
+
+  function cleanGoal(raw) {
+    const g = newGoal(isObj(raw) ? raw : {});
+    g.id = id(g.id);
+    g.title = str(g.title, 120);
+    g.notes = str(g.notes);
+    g.year = int(g.year, 2000, 2100, new Date().getFullYear());
+    g.startMonth = int(g.startMonth, 0, 11, 0);
+    g.endMonth = int(g.endMonth, 0, 11, 11);
+    if (g.endMonth < g.startMonth) [g.startMonth, g.endMonth] = [g.endMonth, g.startMonth];
+    g.progress = int(g.progress, 0, 100, 0);
+    g.target = num(g.target, 0) > 0 ? num(g.target, 0) : null;
+    g.category = catId(g.category);
+    g.milestones = arr(g.milestones).filter(isObj).map((m) => ({
+      id: id(m.id), title: str(m.title, 200), date: date(m.date, `${g.year}-12-15`), done: !!m.done, doneAt: num(m.doneAt, null),
+    }));
+    g.savings = arr(g.savings).filter(isObj).map((x) => ({ id: id(x.id), amount: num(x.amount, 0), date: date(x.date, U.todayKey()) }))
+      .filter((x) => x.amount > 0);
+    return g;
+  }
+
+  function cleanSettings(s, base) {
+    s = isObj(s) ? s : {};
+    return {
+      name: str(s.name, 40),
+      theme: oneOf(s.theme, ['system', 'light', 'dark'], base.theme),
+      weekStart: oneOf(num(s.weekStart, base.weekStart), [0, 1, 6], base.weekStart),
+      clock: oneOf(String(s.clock), ['12', '24'], base.clock),
+      notifications: !!s.notifications,
+      sound: s.sound === undefined ? base.sound : !!s.sound,
+      defaultReminder: int(s.defaultReminder, 0, 10080, base.defaultReminder),
+      showHabits: !!s.showHabits,
+      currency: str(s.currency, 6),
+      lang: oneOf(s.lang, ['ckb', 'en'], base.lang),
+    };
+  }
+
   function normalize(data) {
     const base = defaults();
-    const src = data && typeof data === 'object' ? data : {};
-    const out = { ...base, ...src };
-    out.settings = { ...base.settings, ...(src.settings || {}) };
-    out.meta = { ...base.meta, ...(src.meta && typeof src.meta === 'object' ? src.meta : {}) };
-    ['tasks', 'events', 'habits', 'goals', 'categories'].forEach((k) => {
-      if (!Array.isArray(out[k])) out[k] = base[k];
-    });
-    ['days', 'years', 'reviews', 'notified'].forEach((k) => {
-      if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {};
-    });
-    out.tasks = out.tasks.map((t) => newTask(t));
-    out.events = out.events.map((e) => newEvent(e));
-    out.habits = out.habits.map((h) => newHabit(h));
-    out.goals = out.goals.map((g) => newGoal(g));
+    const src = isObj(data) ? data : {};
+    const out = base;
+    out.settings = cleanSettings(src.settings, base.settings);
+    out.meta = { ...base.meta, ...(isObj(src.meta) ? src.meta : {}) };
+    ['createdAt', 'lastBackup', 'backupSnooze'].forEach((k) => { out.meta[k] = num(out.meta[k], k === 'createdAt' ? Date.now() : null); });
+    out.meta.installTipDismissed = !!out.meta.installTipDismissed;
+    const cats = arr(src.categories).filter(isObj).map((c) => ({ id: id(c.id), name: str(c.name, 24) || 'Other', color: color(c.color, '#94a3b8') }));
+    if (cats.length) out.categories = cats;
+    ['days', 'years', 'reviews', 'notified'].forEach((k) => { out[k] = isObj(src[k]) ? src[k] : {}; });
+    out.tasks = arr(src.tasks).map(cleanTask);
+    out.events = arr(src.events).map(cleanEvent);
+    out.habits = arr(src.habits).map(cleanHabit);
+    out.goals = arr(src.goals).map(cleanGoal);
     return out;
   }
 
@@ -110,7 +220,7 @@
     } catch (e) {
       if (!warnedStorage && App.ui) {
         warnedStorage = true;
-        App.ui.toast('Could not save — browser storage is full or blocked. Export a backup from Settings.', { type: 'danger', duration: 8000 });
+        App.ui.toast(App.t('Could not save. Browser storage is full or blocked. Download a backup from Settings.'), { type: 'danger', duration: 8000 });
       }
     }
   }
@@ -125,6 +235,7 @@
   }
 
   function upsert(coll, item, opts) {
+    item.updatedAt = Date.now();
     const i = state[coll].findIndex((x) => x.id === item.id);
     if (i >= 0) state[coll][i] = item;
     else state[coll].push(item);

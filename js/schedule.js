@@ -31,10 +31,24 @@
       case 'daily': return true;
       case 'weekdays': { const w = U.weekday(key); return w > 0 && w < 6; }
       case 'weekly': return U.weekday(key) === U.weekday(item.date);
-      case 'monthly': return key.slice(8) === item.date.slice(8);
-      case 'yearly': return key.slice(5) === item.date.slice(5);
+      // Days 29–31 fall on the last day of shorter months (and Feb 29 on Feb 28).
+      case 'monthly': return sameDayOfMonth(key, item.date);
+      case 'yearly': return key.slice(5, 7) === item.date.slice(5, 7) && sameDayOfMonth(key, item.date);
       default: return key === item.date;
     }
+  }
+
+  function sameDayOfMonth(key, start) {
+    const d = U.fromKey(key);
+    const want = Number(start.slice(8));
+    return d.getDate() === Math.min(want, U.daysInMonth(d.getFullYear(), d.getMonth()));
+  }
+
+  /* The first day on or after `from` that the item happens (null if none within a year). */
+  function nextOccurrence(item, from) {
+    let k = item.date && item.date > from ? item.date : from;
+    for (let i = 0; i < 400; i++, k = U.addDays(k, 1)) if (occursOn(item, k)) return k;
+    return null;
   }
 
   function isDone(t, key) {
@@ -148,7 +162,7 @@
   App.sched = {
     goalProgress, goalEnd, goalDaysLeft, goalSaved,
     REPEATS, REPEAT_SHORT, REMINDERS, PRIORITIES,
-    isRecurring, occursOn, isDone, setDone, tasksOn, eventsOn, overdue, agenda, dayStats,
+    isRecurring, occursOn, nextOccurrence, isDone, setDone, tasksOn, eventsOn, overdue, agenda, dayStats,
     habitDone, toggleHabit, streak, bestStreak, habitRate, byTimeThenPrio,
   };
 })();
