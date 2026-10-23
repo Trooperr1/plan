@@ -141,7 +141,7 @@
     'goal-money'(a) { App.forms.money(a.dataset.id); },
     'goal-ics'(a) { const g = App.store.find('goals', a.dataset.id); if (g) App.ics.goal(g); },
     'open-goal'(a) {
-      App.views.goals.showYear(Number(a.dataset.year));
+      App.views.goals.showAll();
       location.hash = '#/goals';
     },
     'move-tomorrow'(a) {

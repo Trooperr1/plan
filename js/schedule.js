@@ -183,11 +183,39 @@
 
   /* Goals: progress comes from finished steps when the goal has steps. */
   function goalProgress(g) {
+    if (g.achieved) return 100;
     if (!g.milestones || !g.milestones.length) return g.progress || 0;
     return Math.round((g.milestones.filter((m) => m.done).length / g.milestones.length) * 100);
   }
+  const monthNum = (mk) => Number(mk.slice(0, 4)) * 12 + Number(mk.slice(5, 7)) - 1; // months since year 0
+  function goalStart(g) {
+    return `${g.start}-01`;
+  }
   function goalEnd(g) {
-    return `${g.year}-${U.pad(g.endMonth + 1)}-${U.pad(U.daysInMonth(g.year, g.endMonth))}`;
+    const y = Number(g.end.slice(0, 4));
+    const m = Number(g.end.slice(5, 7)) - 1;
+    return `${g.end}-${U.pad(U.daysInMonth(y, m))}`;
+  }
+  /* Does the goal run during this year? */
+  function goalInYear(g, year) {
+    return Number(g.start.slice(0, 4)) <= year && Number(g.end.slice(0, 4)) >= year;
+  }
+  /* "Aug 2026 – Aug 2027", or "Aug – Dec 2026" inside one year. */
+  function goalRange(g) {
+    const name = (mk) => U.MONTHS_SHORT[Number(mk.slice(5, 7)) - 1];
+    const ys = g.start.slice(0, 4);
+    const ye = g.end.slice(0, 4);
+    if (ys === ye) return g.start === g.end ? `${name(g.start)} ${ys}` : `${name(g.start)} – ${name(g.end)} ${ye}`;
+    return `${name(g.start)} ${ys} – ${name(g.end)} ${ye}`;
+  }
+  /* Length in months, counting both ends. */
+  function goalMonths(g) {
+    return monthNum(g.end) - monthNum(g.start) + 1;
+  }
+  /* Share of the goal's time already passed (0–100). */
+  function goalTimePassed(g) {
+    const total = U.diffDays(goalStart(g), goalEnd(g)) + 1;
+    return U.clamp((U.diffDays(goalStart(g), U.todayKey()) / total) * 100, 0, 100);
   }
   function goalDaysLeft(g) {
     return U.diffDays(U.todayKey(), goalEnd(g));
@@ -197,7 +225,7 @@
   }
 
   App.sched = {
-    goalProgress, goalEnd, goalDaysLeft, goalSaved,
+    goalProgress, goalStart, goalEnd, goalDaysLeft, goalSaved, goalInYear, goalRange, goalMonths, goalTimePassed, monthNum,
     REPEATS, REPEAT_SHORT, REMINDERS, PRIORITIES,
     taskEnd, busy, freeSlots,
     isRecurring, occursOn, nextOccurrence, isDone, setDone, tasksOn, eventsOn, overdue, agenda, dayStats,

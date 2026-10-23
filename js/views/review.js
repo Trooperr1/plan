@@ -86,7 +86,7 @@
   function goalsNext() {
     const today = U.todayKey();
     const goals = App.store.state.goals
-      .filter((g) => S.goalProgress(g) < 100 && S.goalEnd(g) >= today)
+      .filter((g) => !g.achieved && S.goalProgress(g) < 100 && S.goalEnd(g) >= today)
       .sort((a, b) => S.goalEnd(a).localeCompare(S.goalEnd(b)));
     if (!goals.length) {
       return C.empty('flag', T('No active goals'), T('Add a big goal and the steps to reach it.'),

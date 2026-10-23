@@ -246,7 +246,7 @@
     const today = U.todayKey();
     const linked = new Set(tasks.map((t) => t.goalId).filter(Boolean));
     const goals = st.goals
-      .filter((g) => S.goalProgress(g) < 100 && S.goalEnd(g) >= today)
+      .filter((g) => !g.achieved && S.goalProgress(g) < 100 && S.goalEnd(g) >= today && S.goalStart(g) <= today)
       .sort((a, b) => (linked.has(b.id) - linked.has(a.id)) || S.goalEnd(a).localeCompare(S.goalEnd(b)))
       .slice(0, 3);
     if (!goals.length) return '';
@@ -256,7 +256,7 @@
         <div class="towards-list">${goals.map((g) => {
           const c = App.store.category(g.category).color;
           const p = S.goalProgress(g);
-          return `<button type="button" class="towards-goal" style="--c:${U.esc(c)}" data-action="open-goal" data-year="${g.year}">
+          return `<button type="button" class="towards-goal" style="--c:${U.esc(c)}" data-action="open-goal">
             <strong>${U.esc(g.title)}</strong>
             <span class="bar"><span style="width:${p}%"></span></span>
             <small>${p}% · ${T('{n} days left', { n: S.goalDaysLeft(g) })}</small></button>`;

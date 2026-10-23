@@ -24,10 +24,10 @@
   }
 
   function goalPicker(selected) {
-    const goals = store().state.goals.slice().sort((a, b) => a.year - b.year || a.startMonth - b.startMonth);
+    const goals = store().state.goals.filter((g) => !g.achieved || g.id === selected).sort((a, b) => a.end.localeCompare(b.end));
     if (!goals.length) return '';
     return `<label class="field"><span>${T('Goal')} <em>(${T('optional')})</em></span>
-      <select name="goalId">${opts([[null, T('No goal')], ...goals.map((g) => [g.id, `${g.title} (${g.year})`])], selected)}</select></label>`;
+      <select name="goalId">${opts([[null, T('No goal')], ...goals.map((g) => [g.id, `${g.title} (${S.goalRange(g)})`])], selected)}</select></label>`;
   }
 
   function phoneButton() {
@@ -465,6 +465,24 @@
   }
 
   /* ---------------- Goal ---------------- */
+  const MK = /^(\d{4})-(\d{2})$/;
+  const mkAdd = (mk, n) => {
+    const [, y, mo] = mk.match(MK);
+    const d = new Date(Number(y), Number(mo) - 1 + n, 1);
+    return `${d.getFullYear()}-${U.pad(d.getMonth() + 1)}`;
+  };
+  /* Month + year pickers, e.g. [August] [2026]. */
+  function monthYear(name, mk) {
+    const [, y, mo] = mk.match(MK);
+    const now = new Date().getFullYear();
+    const years = [];
+    for (let i = Math.min(now - 2, Number(y)); i <= Math.max(now + 15, Number(y)); i++) years.push([i, String(i)]);
+    return `<span class="month-year">
+      <select name="${name}M" aria-label="${T('Month')}">${monthOptions(Number(mo) - 1)}</select>
+      <select name="${name}Y" aria-label="${T('Year')}">${opts(years, Number(y))}</select></span>`;
+  }
+  const LENGTHS = [[3, '3 months'], [6, '6 months'], [12, '1 year'], [24, '2 years']];
+
   function goal(existing, preset) {
     const isNew = !existing;
     const g = isNew ? store().newGoal(preset) : clone(existing);
@@ -475,11 +493,13 @@
         <form id="${id}" class="form" novalidate>
           <label class="field"><span>${T('Goal')}</span>
             <input name="title" type="text" maxlength="120" value="${esc(g.title)}" placeholder="${T('e.g. Build my garage')}" autocomplete="off" autofocus></label>
-          <label class="field"><span>${T('Year')}</span><input type="number" name="year" min="2000" max="2100" value="${g.year}"></label>
           <div class="row-2">
-            <label class="field"><span>${T('From')}</span><select name="startMonth">${monthOptions(g.startMonth)}</select></label>
-            <label class="field"><span>${T('To')}</span><select name="endMonth">${monthOptions(g.endMonth)}</select></label>
+            <div class="field"><span>${T('Starts')}</span>${monthYear('start', g.start)}</div>
+            <div class="field"><span>${T('Ends')}</span>${monthYear('end', g.end)}</div>
           </div>
+          <div class="dur-row goal-len"><span class="dp-label">${T('How long?')}</span>
+            ${LENGTHS.map(([n, label]) => `<button type="button" class="dur-chip" data-len="${n}">${T(label)}</button>`).join('')}</div>
+          <p class="hint goal-span" data-span></p>
           <label class="field"><span>${T('Money needed')} <em>(${T('optional')})</em></span>
             <input type="number" name="target" min="0" step="any" inputmode="decimal" value="${g.target || ''}" placeholder="${store().state.settings.currency ? esc(store().state.settings.currency) + ' ' : ''}${T('e.g.')} 500000"></label>
           <div class="field"><span>${T('Steps')} <em>(${T('optional')})</em></span>
@@ -501,17 +521,46 @@
       onMount(el) {
         const form = el.querySelector('form');
         const f = form.elements;
+        const read = (name) => `${f[`${name}Y`].value}-${U.pad(Number(f[`${name}M`].value) + 1)}`;
+        const write = (name, mk) => {
+          const [, y, mo] = mk.match(MK);
+          if (![...f[`${name}Y`].options].some((o) => o.value === String(Number(y)))) f[`${name}Y`].add(new Option(String(Number(y)), String(Number(y))));
+          f[`${name}Y`].value = String(Number(y));
+          f[`${name}M`].value = String(Number(mo) - 1);
+        };
+        // Show the length ("1 year 1 month") and mark the matching quick button.
+        const span = () => {
+          // "Aug 2026 → Aug 2027" is 1 year: count the months between start and end.
+          const diff = S.monthNum(read('end')) - S.monthNum(read('start'));
+          const months = Math.max(diff, 1);
+          const box = el.querySelector('[data-span]');
+          if (diff < 0) {
+            box.textContent = T('The end must be after the start.');
+            box.classList.add('bad');
+          } else {
+            const y = Math.floor(months / 12);
+            const mo = months % 12;
+            box.textContent = `${T('Length')}: ${[y ? T(y === 1 ? '1 year' : '{n} years', { n: y }) : '', mo ? T(mo === 1 ? '1 month' : '{n} months', { n: mo }) : ''].filter(Boolean).join(' + ')}`;
+            box.classList.remove('bad');
+          }
+          el.querySelectorAll('[data-len]').forEach((b) => b.classList.toggle('on', Number(b.dataset.len) === diff));
+        };
+        ['startM', 'startY', 'endM', 'endY'].forEach((n) => f[n].addEventListener('change', span));
+        el.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => {
+          write('end', mkAdd(read('start'), Number(b.dataset.len)));
+          span();
+        }));
+        span();
+
         f.progress.addEventListener('input', () => { el.querySelector('[data-out]').textContent = `${f.progress.value}%`; });
-        const year = () => Number(f.year.value) || g.year;
         const msEd = listEditor(el.querySelector('[data-ms]'), g.milestones.map((x) => ({ ...x })),
           (x) => `<input type="checkbox" data-k="done" ${x.done ? 'checked' : ''} aria-label="${T('Done')}"><input type="text" data-k="title" value="${esc(x.title)}" placeholder="${T('Step')}"><input type="date" data-k="date" value="${x.date || ''}" aria-label="${T('Date')}">`,
           (list) => {
-            // Each new step defaults to a month after the previous one, inside the goal's year.
-            const y = year();
-            let m = Number(f.startMonth.value);
+            // A new step defaults to a month after the previous one (or the goal's first month), never past the end.
             const last = list.length && list[list.length - 1].date;
-            if (last && Number(last.slice(0, 4)) === y) m = Math.min(11, Number(last.slice(5, 7)));
-            return { id: U.uid(), title: '', date: `${y}-${U.pad(m + 1)}-${U.pad(Math.min(28, U.daysInMonth(y, m)))}`, done: false };
+            let mk = last ? mkAdd(last.slice(0, 7), 1) : read('start');
+            if (mk > read('end')) mk = read('end');
+            return { id: U.uid(), title: '', date: `${mk}-28`, done: false };
           });
         el.querySelector('[data-add-ms]').addEventListener('click', () => { msEd.add(); syncProgress(); });
         // With steps, progress is automatic, so hide the manual slider.
@@ -527,29 +576,60 @@
           e.preventDefault();
           const title = f.title.value.trim();
           if (!title) return fieldError(form, 'title', T('Please name your goal.'));
-          const yr = Number(f.year.value);
-          if (!yr || yr < 2000 || yr > 2100) return fieldError(form, 'year', T('Please enter a valid year.'));
-          let sm = Number(f.startMonth.value);
-          let em = Number(f.endMonth.value);
-          if (em < sm) [sm, em] = [em, sm];
+          const start = read('start');
+          const end = read('end');
+          if (end < start) return fieldError(form, 'endM', T('The end must be after the start.'));
           g.title = title;
-          g.year = yr;
+          g.start = start;
+          g.end = end;
           g.category = f.category.value;
-          g.startMonth = sm;
-          g.endMonth = em;
           g.progress = Number(f.progress.value);
           g.target = Number(f.target.value) > 0 ? Number(f.target.value) : null;
           g.notes = f.notes.value.trim();
           g.milestones = msEd.collect().filter((x) => x.title.trim())
-            .map((x) => ({ id: x.id, title: x.title.trim(), date: x.date || `${yr}-${U.pad(em + 1)}-15`, done: !!x.done, doneAt: x.done ? x.doneAt || Date.now() : null }))
+            .map((x) => ({ id: x.id, title: x.title.trim(), date: x.date || `${end}-15`, done: !!x.done, doneAt: x.done ? x.doneAt || Date.now() : null }))
             .sort((a, b) => a.date.localeCompare(b.date));
-          if (App.views.goals) App.views.goals.showYear(g.year); // before saving, so the redraw shows this year
+          if (App.views.goals) App.views.goals.showGoal(g); // before saving, so the redraw shows it
           store().upsert('goals', g);
-          App.ui.toast(isNew ? T('Goal added to {year}', { year: g.year }) : T('Goal saved'));
+          App.ui.toast(isNew ? T('Goal added: {range}', { range: S.goalRange(g) }) : T('Goal saved'));
           m.close();
         });
         const del = el.querySelector('[data-delete]');
         if (del) del.addEventListener('click', () => { m.close(); App.actions.deleteGoal(g.id); });
+      },
+    });
+  }
+
+  /* ---------------- One quick step for a goal ---------------- */
+  function step(goalId) {
+    const g = store().find('goals', goalId);
+    if (!g) return;
+    const last = g.milestones.length ? g.milestones[g.milestones.length - 1].date.slice(0, 7) : null;
+    let mk = last ? mkAdd(last, 1) : (U.todayKey().slice(0, 7) > g.start ? U.todayKey().slice(0, 7) : g.start);
+    if (mk > g.end) mk = g.end;
+    const m = App.ui.modal({
+      title: T('Add step'),
+      size: 'sm',
+      body: `
+        <form id="stepForm" class="form" novalidate>
+          <p class="muted sm">${esc(g.title)} · ${esc(S.goalRange(g))}</p>
+          <label class="field"><span>${T('Step')}</span><input type="text" name="title" maxlength="200" placeholder="${T('e.g. Save the first 100,000')}" autocomplete="off" autofocus></label>
+          <label class="field"><span>${T('Date')}</span><input type="date" name="date" value="${mk}-28"></label>
+        </form>`,
+      footer: `<span class="spacer"></span><button type="button" class="btn ghost" data-close>${T('Cancel')}</button>
+        <button type="submit" class="btn primary" form="stepForm">${T('Add')}</button>`,
+      onMount(el) {
+        const form = el.querySelector('form');
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const title = form.elements.title.value.trim();
+          if (!title) return fieldError(form, 'title', T('Please name the step.'));
+          g.milestones.push({ id: U.uid(), title, date: form.elements.date.value || `${g.end}-15`, done: false, doneAt: null });
+          g.milestones.sort((a, b) => a.date.localeCompare(b.date));
+          store().save();
+          App.ui.toast(T('Step added'));
+          m.close();
+        });
       },
     });
   }
@@ -766,5 +846,5 @@
     });
   }
 
-  App.forms = { task, event, habit, goal, money, entry, bill, budget };
+  App.forms = { task, event, habit, goal, step, money, entry, bill, budget };
 })();

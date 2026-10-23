@@ -128,15 +128,24 @@
     g.id = id(g.id);
     g.title = str(g.title, 120);
     g.notes = str(g.notes);
-    g.year = int(g.year, 2000, 2100, new Date().getFullYear());
-    g.startMonth = int(g.startMonth, 0, 11, 0);
-    g.endMonth = int(g.endMonth, 0, 11, 11);
-    if (g.endMonth < g.startMonth) [g.startMonth, g.endMonth] = [g.endMonth, g.startMonth];
+    // Goals run from a start month to an end month, which can be in different years ("2026-08" → "2027-08").
+    // Older goals stored one year with a start and end month; convert them.
+    const RE_MONTH = /^(20\d\d|2100)-(0[1-9]|1[0-2])$/;
+    const oldYear = int(g.year, 2000, 2100, new Date().getFullYear());
+    const src = isObj(raw) ? raw : {};
+    if (typeof src.start !== 'string' || !RE_MONTH.test(src.start)) g.start = `${oldYear}-${U.pad(int(g.startMonth, 0, 11, 0) + 1)}`;
+    if (typeof src.end !== 'string' || !RE_MONTH.test(src.end)) g.end = `${oldYear}-${U.pad(int(g.endMonth, 0, 11, 11) + 1)}`;
+    if (g.end < g.start) [g.start, g.end] = [g.end, g.start];
+    delete g.year;
+    delete g.startMonth;
+    delete g.endMonth;
+    g.achieved = !!g.achieved;
+    g.achievedAt = g.achieved ? num(g.achievedAt, Date.now()) : null;
     g.progress = int(g.progress, 0, 100, 0);
     g.target = num(g.target, 0) > 0 ? num(g.target, 0) : null;
     g.category = catId(g.category);
     g.milestones = arr(g.milestones).filter(isObj).map((m) => ({
-      id: id(m.id), title: str(m.title, 200), date: date(m.date, `${g.year}-12-15`), done: !!m.done, doneAt: num(m.doneAt, null),
+      id: id(m.id), title: str(m.title, 200), date: date(m.date, `${g.end}-15`), done: !!m.done, doneAt: num(m.doneAt, null),
     }));
     g.savings = arr(g.savings).filter(isObj).map((x) => ({ id: id(x.id), amount: num(x.amount, 0), date: date(x.date, U.todayKey()) }))
       .filter((x) => x.amount > 0);
@@ -228,8 +237,8 @@
   function newGoal(p) {
     const now = new Date();
     return {
-      id: U.uid(), title: '', notes: '', year: now.getFullYear(), category: defaultCategory(),
-      startMonth: now.getMonth(), endMonth: 11, progress: 0, milestones: [], target: null, savings: [],
+      id: U.uid(), title: '', notes: '', category: defaultCategory(),
+      start: `${now.getFullYear()}-${U.pad(now.getMonth() + 1)}`, end: `${now.getFullYear()}-12`, achieved: false, achievedAt: null, progress: 0, milestones: [], target: null, savings: [],
       createdAt: Date.now(), ...(p || {}),
     };
   }
