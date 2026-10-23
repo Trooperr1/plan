@@ -1145,3 +1145,27 @@ output { font-weight: 700; color: var(--primary); }
 .dp-chip.free { cursor: pointer; border-color: color-mix(in srgb, var(--success) 40%, var(--border)); background: var(--success-soft); color: var(--text); }
 .dp-chip.free:hover { border-color: var(--success); }
 .free-time { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ---------- How long? / Now & Next ---------- */
+.dur-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -4px; }
+.dur-row[hidden] { display: none; }
+.dur-chip {
+  display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-2); font-size: 13px; font-weight: 600;
+}
+.dur-chip:hover { border-color: var(--primary); }
+.dur-chip.on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.dur-chip.first { color: var(--primary); border-style: dashed; }
+.now-next { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.nn {
+  flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border); cursor: pointer;
+}
+.nn.free { cursor: default; }
+.nn strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nn-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.nn.now .nn-tag { color: var(--danger); }
+.nn.now { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.nn.free .nn-tag { color: var(--success); }
+.nn.next .nn-tag { color: var(--primary); }
+[dir="rtl"] .nn.next .nn-tag .ico { transform: scaleX(-1); }

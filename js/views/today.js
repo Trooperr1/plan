@@ -13,6 +13,7 @@
   function parseQuick(text) {
     const cats = App.store.state.categories;
     let time = null;
+    let endTime = null;
     let priority = 'medium';
     let category = null;
     let title = ` ${text} `;
@@ -27,8 +28,32 @@
       category = cat.id;
       return ' ';
     });
+    // Ranges: "5-7pm", "9:30am-11", "17:00-19:00", "کاتژمێر 5 تا 7 د.ن"
+    const to12 = (h, ap) => (h % 12) + (/pm|د/i.test(ap) ? 12 : 0);
+    title = title.replace(/\s(?:from\s+|کاتژمێر\s+|لە\s+)?(\d{1,2})(?::([0-5]\d))?\s?(am|pm|پ\.ن|د\.ن)?\s?(?:-|–|to|تا|بۆ)\s?(\d{1,2})(?::([0-5]\d))?\s?(am|pm|پ\.ن|د\.ن)?(?=\s)/i,
+      (m, h1, m1, ap1, h2, m2, ap2) => {
+        h1 = Number(h1);
+        h2 = Number(h2);
+        let a;
+        let b;
+        if (ap1 || ap2) {
+          if (h1 < 1 || h1 > 12 || h2 < 1 || h2 > 12) return m;
+          b = to12(h2, ap2 || ap1) * 60 + Number(m2 || 0);
+          a = to12(h1, ap1 || ap2) * 60 + Number(m1 || 0);
+          if (!ap1 && a >= b) a = to12(h1, 'am') * 60 + Number(m1 || 0); // "11-1pm" = 11 AM to 1 PM
+        } else {
+          if (!m1 && !m2) return m; // plain "5-7" could be anything; needs am/pm or minutes
+          if (h1 > 23 || h2 > 23) return m;
+          a = h1 * 60 + Number(m1 || 0);
+          b = h2 * 60 + Number(m2 || 0);
+        }
+        if (b <= a) return m;
+        time = U.fromMin(a);
+        endTime = U.fromMin(b);
+        return ' ';
+      });
     // "5pm", "at 5:30 pm", "کاتژمێر 5 د.ن" (د.ن = PM, پ.ن = AM)
-    title = title.replace(/\s(?:at\s+|کاتژمێر\s+)?(\d{1,2})(?::([0-5]\d))?\s?(am|pm|پ\.ن|د\.ن)(?=\s)/i, (m, h, mi, ap) => {
+    if (!time) title = title.replace(/\s(?:at\s+|کاتژمێر\s+)?(\d{1,2})(?::([0-5]\d))?\s?(am|pm|پ\.ن|د\.ن)(?=\s)/i, (m, h, mi, ap) => {
       h = Number(h);
       if (h < 1 || h > 12) return m;
       h = (h % 12) + (/pm|د/i.test(ap) ? 12 : 0);
@@ -41,7 +66,7 @@
         return ' ';
       });
     }
-    return { title: title.replace(/\s+/g, ' ').trim(), time, priority, category };
+    return { title: title.replace(/\s+/g, ' ').trim(), time, endTime, priority, category };
   }
 
   function schedule(key, isToday) {
@@ -104,6 +129,26 @@
             data-time="${U.fromMin(x.s)}" data-end="${U.fromMin(Math.min(x.e, x.s + 60))}" title="${T('Add a task at this time')}">
             <b>${range(x)}</b> · ${U.fmtDuration((x.e - x.s) * 60000)}</button>`).join('')
           : `<span class="muted sm">${T('No free time left on this day.')}</span>`}
+      </div>`;
+  }
+
+  /* "Now" and "Next" for today: what is happening and what comes after. */
+  function nowNext() {
+    const today = U.todayKey();
+    const d = new Date();
+    const now = d.getHours() * 60 + d.getMinutes();
+    const items = S.busy(today).filter((b) => !(b.kind === 'task' && S.isDone(b.item, today)));
+    const cur = items.filter((b) => b.s <= now && b.e > now);
+    const next = items.find((b) => b.s > now);
+    if (!cur.length && !next) return '';
+    const edit = (b) => `data-action="${b.kind === 'task' ? 'edit-task' : 'edit-event'}" data-id="${b.item.id}" role="button" tabindex="0"`;
+    return `
+      <div class="now-next">
+        ${cur.length ? `<div class="nn now" ${edit(cur[0])}><span class="nn-tag">${icon('zap', 13)} ${T('Now')}</span>
+          <strong>${U.esc(cur[0].title)}</strong><span class="muted sm">${T('{time} left', { time: U.fmtDuration((cur[0].e - now) * 60000) })}</span></div>`
+          : `<div class="nn free"><span class="nn-tag">${icon('check', 13)} ${T('Now')}</span><strong>${T('You are free')}</strong>${next ? `<span class="muted sm">${T('until {time}', { time: U.fmtTime(U.fromMin(next.s)) })}</span>` : ''}</div>`}
+        ${next ? `<div class="nn next" ${edit(next)}><span class="nn-tag">${icon('right', 13)} ${T('Next')}</span>
+          <strong>${U.esc(next.title)}</strong><span class="muted sm">${U.fmtTime(U.fromMin(next.s))} · ${T('in {time}', { time: U.fmtDuration((next.s - now) * 60000) })}</span></div>` : ''}
       </div>`;
   }
 
@@ -248,6 +293,7 @@
             </div>
             <h2>${heading}</h2>
             <p class="muted">${U.fmtDate(key, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            ${isToday ? nowNext() : ''}
           </div>
           ${tasks.length ? `<div class="hero-stats">${C.progressRing(pct, 88, T('{done} of {total}', { done, total: tasks.length }))}</div>` : ''}
         </section>
@@ -320,11 +366,13 @@
       title: parsed.title,
       date: view.date || U.todayKey(),
       time: parsed.time,
+      endTime: parsed.endTime,
       priority: parsed.priority,
       category: parsed.category || App.store.defaultCategory(),
       reminder: parsed.time ? st.settings.defaultReminder : null,
     }));
-    App.ui.toast(parsed.time ? T('Added “{name}” at {time}', { name: parsed.title, time: U.fmtTime(parsed.time) }) : T('Added “{name}”', { name: parsed.title }));
+    const when = parsed.time ? `${U.fmtTime(parsed.time)}${parsed.endTime ? ` – ${U.fmtTime(parsed.endTime)}` : ''}` : '';
+    App.ui.toast(parsed.time ? T('Added “{name}” at {time}', { name: parsed.title, time: when }) : T('Added “{name}”', { name: parsed.title }));
     const again = document.getElementById('quickAdd');
     if (again) {
       again.value = '';

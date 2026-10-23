@@ -467,6 +467,14 @@ window.App.dictCkb = {
   'Your whole day is free': 'هەموو ڕۆژەکەت بەتاڵە',
   'Add a task at this time': 'ئەرکێک لەم کاتەدا زیاد بکە',
 
+  'How long?': 'چەند دەخایەنێت؟',
+  'First free time': 'یەکەم کاتی بەتاڵ',
+  'Copy to tomorrow': 'کۆپی بۆ سبەی',
+  'Copied to tomorrow': 'کۆپی کرا بۆ سبەی',
+  '{time} left': '{time} ماوە',
+  'You are free': 'تۆ بەتاڵیت',
+  'until {time}': 'تا {time}',
+
   // Default categories
   'Personal': 'کەسی',
   'Work': 'کار',

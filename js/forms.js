@@ -78,6 +78,42 @@
     }));
   }
 
+  /* "How long?" buttons: set the length, or jump to the first free time that fits. */
+  const DURATIONS = [15, 30, 60, 120];
+  function durRow() {
+    return `<div class="dur-row"><span class="dp-label">${T('How long?')}</span>
+      ${DURATIONS.map((d) => `<button type="button" class="dur-chip" data-dur="${d}">${U.fmtDuration(d * 60000)}</button>`).join('')}
+      <button type="button" class="dur-chip first" data-first>${icon('zap', 13)}${T('First free time')}</button></div>`;
+  }
+  function wireDur(el, read, apply, skipId) {
+    const row = el.querySelector('.dur-row');
+    const mark = () => {
+      const { start, end } = read();
+      const len = start && end ? U.toMin(end) - U.toMin(start) : null;
+      row.querySelectorAll('[data-dur]').forEach((b) => b.classList.toggle('on', Number(b.dataset.dur) === len));
+    };
+    const firstFree = (date, len) => S.freeSlots(date, skipId, 6 * 60, 24 * 60).find((x) => x.e - x.s >= len);
+    row.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const { date, start, end } = read();
+      if (!date) return App.ui.toast(T('Please choose a date.'), { type: 'danger' });
+      const cur = start && end && U.toMin(end) > U.toMin(start) ? U.toMin(end) - U.toMin(start) : 60;
+      const len = btn.dataset.dur ? Number(btn.dataset.dur) : cur;
+      let s = start && !btn.hasAttribute('data-first') ? U.toMin(start) : null;
+      if (s == null) {
+        const slot = firstFree(date, len);
+        if (!slot) return App.ui.toast(T('No free time left on this day.'), { type: 'danger' });
+        s = slot.s;
+      }
+      apply(U.fromMin(s), U.fromMin(Math.min(s + len, 1439)));
+      mark();
+    });
+    el.querySelector('form').addEventListener('change', mark);
+    mark();
+    return mark;
+  }
+
   function fieldError(form, name, msg) {
     const input = form.elements[name];
     input.classList.add('invalid');
@@ -141,6 +177,7 @@
             <label class="field"><span>${T('From')}</span><input type="time" name="time" value="${t.time || ''}"></label>
             <label class="field"><span>${T('To')}</span><input type="time" name="endTime" value="${t.endTime || ''}"></label>
           </div>
+          ${durRow()}
           <div class="day-plan" data-dayplan></div>
           <div class="row-2">
             <label class="field"><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(t.reminder)}</select></label>
@@ -166,6 +203,7 @@
             </div>
           </details>
           ${phoneButton()}
+          ${!isNew ? `<button type="button" class="btn ghost phone-cal" data-copy>${icon('repeat', 16)}${T('Copy to tomorrow')}</button>` : ''}
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -187,9 +225,8 @@
           });
         form.elements.time.addEventListener('change', () => {
           const f = form.elements;
-          if (f.time.value && (!f.endTime.value || U.toMin(f.endTime.value) <= U.toMin(f.time.value))) {
-            f.endTime.value = U.fromMin(U.toMin(f.time.value) + lastDur);
-          }
+          // Moving the start moves the end too, so the task keeps its length.
+          if (f.time.value) f.endTime.value = U.fromMin(Math.min(U.toMin(f.time.value) + lastDur, 1439));
           if (!f.time.value) f.endTime.value = '';
           drawPlan();
         });
@@ -200,6 +237,23 @@
         });
         form.elements.date.addEventListener('change', drawPlan);
         drawPlan();
+        wireDur(el, () => ({ date: form.elements.date.value, start: form.elements.time.value, end: form.elements.endTime.value }), (a, b) => {
+          form.elements.time.value = a;
+          form.elements.endTime.value = b;
+          lastDur = U.toMin(b) - U.toMin(a);
+          form.elements.time.dispatchEvent(new Event('change'));
+        }, t.id);
+        const copy = el.querySelector('[data-copy]');
+        if (copy) copy.addEventListener('click', () => {
+          const c = clone(existing);
+          Object.assign(c, {
+            id: U.uid(), date: U.addDays(U.todayKey(), 1), repeat: 'none', done: false, completedAt: null, doneDates: {},
+            createdAt: Date.now(), subtasks: (c.subtasks || []).map((x) => ({ ...x, id: U.uid(), done: false })),
+          });
+          store().upsert('tasks', c);
+          App.ui.toast(T('Copied to tomorrow'), { icon: 'repeat' });
+          m.close();
+        });
 
         const hint = el.querySelector('[data-reminder-hint]');
         const updateHint = () => {
@@ -274,6 +328,7 @@
             <label class="field"><span>${T('Starts')}</span><input type="time" name="start" value="${ev.start || '09:00'}"></label>
             <label class="field"><span>${T('Ends')}</span><input type="time" name="end" value="${ev.end || '10:00'}"></label>
           </div>
+          ${durRow()}
           <div class="day-plan" data-dayplan></div>
           <div class="row-2">
             <label class="field" data-reminder><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(ev.reminder)}</select></label>
@@ -307,6 +362,7 @@
         f.end.addEventListener('change', drawPlan);
         const syncAllDay = () => {
           plan.hidden = f.allDay.checked;
+          el.querySelector('.dur-row').hidden = f.allDay.checked;
           el.querySelector('[data-times]').hidden = f.allDay.checked;
           el.querySelector('[data-reminder]').hidden = f.allDay.checked;
         };
@@ -322,6 +378,13 @@
         f.end.addEventListener('change', () => { ev.end = f.end.value; });
         syncAllDay();
         drawPlan();
+        wireDur(el, () => ({ date: f.date.value, start: f.start.value, end: f.end.value }), (a, b) => {
+          f.start.value = a;
+          f.end.value = b;
+          ev.start = a;
+          ev.end = b;
+          drawPlan();
+        }, ev.id);
 
         const collect = () => {
           const title = f.title.value.trim();
