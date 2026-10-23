@@ -20,7 +20,7 @@
     const meta = [];
     if (opts.showDate && t.date) meta.push(`<span class="meta ${isOverdue ? 'danger' : ''}">${icon('calendar', 13)}${U.relDay(t.date)}</span>`);
     if (opts.showDate && !t.date) meta.push(`<span class="meta">${icon('inbox', 13)}${T('Someday')}</span>`);
-    if (t.time) meta.push(`<span class="meta">${icon('clock', 13)}${U.fmtTime(t.time)}</span>`);
+    if (t.time) meta.push(`<span class="meta time-range">${icon('clock', 13)}${U.fmtTime(t.time)}${t.endTime ? ` – ${U.fmtTime(t.endTime)}` : ''}</span>`);
     meta.push(categoryChip(t.category));
     if (t.priority === 'high') meta.push(`<span class="meta prio-tag">${icon('zap', 13)}${T('High')}</span>`);
     if (S.isRecurring(t)) meta.push(`<span class="meta" title="${T(S.REPEATS[t.repeat])}">${icon('repeat', 13)}${T(S.REPEAT_SHORT[t.repeat])}</span>`);

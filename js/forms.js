@@ -34,6 +34,50 @@
     return `<button type="button" class="btn ghost phone-cal" data-ics>${icon('bell', 16)}${T('Add to phone calendar')} <em>${T('rings even when this app is closed')}</em></button>`;
   }
 
+  /* "Your day": busy and free hours for the chosen date, a clash warning, and free times to tap. */
+  function dayPlan(box, o, onPick) {
+    if (!o.date) {
+      box.innerHTML = '';
+      return;
+    }
+    const busy = S.busy(o.date, o.skipId);
+    const s = o.start ? U.toMin(o.start) : null;
+    const e = s == null ? null : o.end && U.toMin(o.end) > s ? U.toMin(o.end) : s + 30;
+    let from = 6 * 60;
+    busy.forEach((b) => { from = Math.min(from, Math.floor(b.s / 60) * 60); });
+    if (s != null) from = Math.min(from, Math.floor(s / 60) * 60);
+    const to = 24 * 60;
+    const pos = (m) => (((m - from) / (to - from)) * 100).toFixed(2);
+    const wid = (a, b) => (((Math.min(b, to) - a) / (to - from)) * 100).toFixed(2);
+    const range = (a, b) => `${U.fmtTime(U.fromMin(a))} – ${U.fmtTime(U.fromMin(Math.min(b, 1439)))}`;
+    const clash = s == null ? [] : busy.filter((b) => b.s < e && b.e > s);
+    const free = S.freeSlots(o.date, o.skipId, from, to);
+    const ticks = [];
+    for (let h = Math.ceil(from / 180) * 3; h <= 24; h += 3) ticks.push(h);
+    box.innerHTML = `
+      <div class="dp-head"><strong>${icon('calendar', 15)} ${T('Your day')} · ${U.esc(U.relDay(o.date))}</strong>
+        <span class="muted sm">${busy.length ? T('{n} busy', { n: busy.length }) : ''}</span></div>
+      <div class="dp-bar" aria-hidden="true">
+        ${ticks.map((h) => `<i class="dp-tick" style="--x:${pos(h * 60)}%"><span>${h === 24 ? '' : U.fmtHour(h)}</span></i>`).join('')}
+        ${busy.map((b) => `<b class="dp-busy" style="--x:${pos(b.s)}%;width:${wid(b.s, b.e)}%;--c:${U.esc(App.store.category(b.item.category).color)}" title="${U.esc(b.title)} · ${range(b.s, b.e)}"></b>`).join('')}
+        ${s != null ? `<b class="dp-new ${clash.length ? 'clash' : ''}" style="--x:${pos(s)}%;width:${wid(s, e)}%"></b>` : ''}
+      </div>
+      ${s == null ? `<p class="dp-hint">${T('Pick a free time below, or type the hours above.')}</p>`
+        : clash.length ? `<p class="dp-warn">${icon('alert', 15)} ${T('This time is busy: {name} ({time})', { name: U.esc(clash[0].title), time: range(clash[0].s, clash[0].e) })}${clash.length > 1 ? ` +${clash.length - 1}` : ''}</p>`
+          : `<p class="dp-ok">${icon('check', 15)} ${T('This time is free')} · ${range(s, e)}</p>`}
+      ${busy.length ? `<div class="dp-row"><span class="dp-label busy">${T('Busy')}</span>
+        ${busy.map((b) => `<span class="dp-chip busy" style="--c:${U.esc(App.store.category(b.item.category).color)}"><b>${range(b.s, b.e)}</b> ${U.esc(b.title)}</span>`).join('')}</div>` : ''}
+      <div class="dp-row"><span class="dp-label free">${T('Free')}</span>
+        ${free.length ? free.map((x) => `<button type="button" class="dp-chip free" data-s="${x.s}" data-e="${x.e}"><b>${range(x.s, x.e)}</b> · ${U.fmtDuration((x.e - x.s) * 60000)}</button>`).join('')
+          : `<span class="muted sm">${T('No free time left on this day.')}</span>`}</div>
+      ${!busy.length ? `<p class="dp-ok">🎉 ${T('Your whole day is free')}</p>` : ''}`;
+    box.querySelectorAll('.dp-chip.free').forEach((btn) => btn.addEventListener('click', () => {
+      const a = Number(btn.dataset.s);
+      const dur = s != null ? e - s : 60;
+      onPick(U.fromMin(a), U.fromMin(Math.min(Number(btn.dataset.e), a + dur, 1439)));
+    }));
+  }
+
   function fieldError(form, name, msg) {
     const input = form.elements[name];
     input.classList.add('invalid');
@@ -92,10 +136,12 @@
         <form id="${id}" class="form" novalidate>
           <label class="field"><span>${T('Title')}</span>
             <input name="title" type="text" maxlength="200" value="${esc(t.title)}" placeholder="${T('What do you need to do?')}" autocomplete="off" autofocus></label>
-          <div class="row-2">
-            <label class="field"><span>${T('Date')}</span><input type="date" name="date" value="${t.date || ''}"></label>
-            <label class="field"><span>${T('Time')}</span><input type="time" name="time" value="${t.time || ''}"></label>
+          <label class="field"><span>${T('Date')}</span><input type="date" name="date" value="${t.date || ''}"></label>
+          <div class="row-2 time-pair">
+            <label class="field"><span>${T('From')}</span><input type="time" name="time" value="${t.time || ''}"></label>
+            <label class="field"><span>${T('To')}</span><input type="time" name="endTime" value="${t.endTime || ''}"></label>
           </div>
+          <div class="day-plan" data-dayplan></div>
           <div class="row-2">
             <label class="field"><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(t.reminder)}</select></label>
             <label class="field"><span>${T('Repeat')}</span><select name="repeat">${repeatOptions(t.repeat)}</select></label>
@@ -129,6 +175,32 @@
           () => ({ id: U.uid(), title: '', done: false }));
         el.querySelector('[data-add-sub]').addEventListener('click', subs.add);
 
+        // Your day: redraw when the date or hours change; keep the length when the start moves.
+        const plan = el.querySelector('[data-dayplan]');
+        let lastDur = t.time && t.endTime ? U.toMin(t.endTime) - U.toMin(t.time) : 60;
+        const drawPlan = () => dayPlan(plan, { date: form.elements.date.value, start: form.elements.time.value, end: form.elements.endTime.value, skipId: t.id },
+          (a, b) => {
+            form.elements.time.value = a;
+            form.elements.endTime.value = b;
+            lastDur = U.toMin(b) - U.toMin(a);
+            form.elements.time.dispatchEvent(new Event('change'));
+          });
+        form.elements.time.addEventListener('change', () => {
+          const f = form.elements;
+          if (f.time.value && (!f.endTime.value || U.toMin(f.endTime.value) <= U.toMin(f.time.value))) {
+            f.endTime.value = U.fromMin(U.toMin(f.time.value) + lastDur);
+          }
+          if (!f.time.value) f.endTime.value = '';
+          drawPlan();
+        });
+        form.elements.endTime.addEventListener('change', () => {
+          const f = form.elements;
+          if (f.time.value && f.endTime.value && U.toMin(f.endTime.value) > U.toMin(f.time.value)) lastDur = U.toMin(f.endTime.value) - U.toMin(f.time.value);
+          drawPlan();
+        });
+        form.elements.date.addEventListener('change', drawPlan);
+        drawPlan();
+
         const hint = el.querySelector('[data-reminder-hint]');
         const updateHint = () => {
           hint.hidden = !(form.elements.reminder.value !== '' && (!form.elements.time.value || !form.elements.date.value));
@@ -155,6 +227,11 @@
           t.title = title;
           t.date = f.date.value || null;
           t.time = f.time.value || null;
+          t.endTime = t.time && f.endTime.value ? f.endTime.value : null;
+          if (t.endTime && U.toMin(t.endTime) <= U.toMin(t.time)) {
+            fieldError(form, 'endTime', T('The end time must be after the start time.'));
+            return false;
+          }
           t.priority = form.querySelector('input[name="priority"]:checked').value;
           t.category = f.category.value;
           t.repeat = f.repeat.value;
@@ -197,6 +274,7 @@
             <label class="field"><span>${T('Starts')}</span><input type="time" name="start" value="${ev.start || '09:00'}"></label>
             <label class="field"><span>${T('Ends')}</span><input type="time" name="end" value="${ev.end || '10:00'}"></label>
           </div>
+          <div class="day-plan" data-dayplan></div>
           <div class="row-2">
             <label class="field" data-reminder><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(ev.reminder)}</select></label>
             <label class="field"><span>${T('Repeat')}</span><select name="repeat">${repeatOptions(ev.repeat)}</select></label>
@@ -217,7 +295,18 @@
       onMount(el) {
         const form = el.querySelector('form');
         const f = form.elements;
+        const plan = el.querySelector('[data-dayplan]');
+        const drawPlan = () => dayPlan(plan, { date: f.date.value, start: f.start.value, end: f.end.value, skipId: ev.id }, (a, b) => {
+          f.start.value = a;
+          f.end.value = b;
+          ev.start = a;
+          ev.end = b;
+          drawPlan();
+        });
+        f.date.addEventListener('change', drawPlan);
+        f.end.addEventListener('change', drawPlan);
         const syncAllDay = () => {
+          plan.hidden = f.allDay.checked;
           el.querySelector('[data-times]').hidden = f.allDay.checked;
           el.querySelector('[data-reminder]').hidden = f.allDay.checked;
         };
@@ -228,9 +317,11 @@
           if (f.start.value) f.end.value = U.fromMin(U.toMin(f.start.value) + Math.max(15, dur));
           ev.start = f.start.value;
           ev.end = f.end.value;
+          drawPlan();
         });
         f.end.addEventListener('change', () => { ev.end = f.end.value; });
         syncAllDay();
+        drawPlan();
 
         const collect = () => {
           const title = f.title.value.trim();

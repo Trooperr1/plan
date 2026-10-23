@@ -122,7 +122,7 @@
     const cols = days.map((k) => {
       const items = [
         ...S.eventsOn(k).filter((e) => !e.allDay).map((e) => ({ kind: 'event', item: e, s: U.toMin(e.start), e: Math.max(U.toMin(e.end), U.toMin(e.start) + 15) })),
-        ...S.tasksOn(k).filter((t) => t.time).map((t) => ({ kind: 'task', item: t, s: U.toMin(t.time), e: U.toMin(t.time) + 30 })),
+        ...S.tasksOn(k).filter((t) => t.time).map((t) => ({ kind: 'task', item: t, s: U.toMin(t.time), e: U.toMin(S.taskEnd(t)) })),
       ];
       const blocks = layout(items).map((it) => {
         const c = App.store.category(it.item.category).color;
@@ -133,7 +133,7 @@
         return `<div class="wk-block ${it.kind} ${done ? 'done' : ''}" style="--c:${U.esc(c)};top:${top}px;height:${h}px;left:calc(${w * it.col}% + 2px);width:calc(${w}% - 4px)"
           data-action="${it.kind === 'task' ? 'edit-task' : 'edit-event'}" data-id="${it.item.id}" title="${U.esc(it.item.title)}">
           <strong>${it.kind === 'task' ? '☐ ' : ''}${U.esc(it.item.title)}</strong>
-          <span>${U.fmtTime(U.fromMin(it.s))}${it.kind === 'event' ? ` – ${U.fmtTime(U.fromMin(it.e))}` : ''}</span></div>`;
+          <span>${U.fmtTime(U.fromMin(it.s))}${it.kind === 'event' || it.item.endTime ? ` – ${U.fmtTime(U.fromMin(it.e))}` : ''}</span></div>`;
       }).join('');
       const nowLine = k === today ? `<div class="wk-now" style="top:${(nowMin / 60) * HOUR_PX}px"></div>` : '';
       return `<div class="wk-col ${k === today ? 'today' : ''}" data-action="week-slot" data-date="${k}">${blocks}${nowLine}</div>`;

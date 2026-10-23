@@ -454,6 +454,19 @@ window.App.dictCkb = {
   'Gift received': 'دیاری وەرگیراو',
   'Other income': 'داهاتی تر',
 
+  // Busy and free hours
+  'Your day': 'ڕۆژەکەت',
+  '{n} busy': '{n} کاری گیراو',
+  'Busy': 'گیراو',
+  'Free': 'بەتاڵ',
+  'Free time': 'کاتی بەتاڵ',
+  'This time is free': 'ئەم کاتە بەتاڵە',
+  'This time is busy: {name} ({time})': 'ئەم کاتە گیراوە: {name} ({time})',
+  'Pick a free time below, or type the hours above.': 'کاتێکی بەتاڵ لە خوارەوە هەڵبژێرە، یان کاتژمێرەکان لە سەرەوە بنووسە.',
+  'No free time left on this day.': 'لەم ڕۆژەدا هیچ کاتێکی بەتاڵ نەماوە.',
+  'Your whole day is free': 'هەموو ڕۆژەکەت بەتاڵە',
+  'Add a task at this time': 'ئەرکێک لەم کاتەدا زیاد بکە',
+
   // Default categories
   'Personal': 'کەسی',
   'Work': 'کار',

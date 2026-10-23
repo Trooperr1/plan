@@ -85,7 +85,7 @@
 
   function task(t) {
     download(t.title, calendar([{
-      uid: t.id, title: t.title, notes: t.notes, date: t.date || U.todayKey(), start: t.time, allDay: !t.time,
+      uid: t.id, title: t.title, notes: t.notes, date: t.date || U.todayKey(), start: t.time, end: t.endTime, allDay: !t.time,
       repeat: t.repeat, reminder: t.reminder,
     }]));
   }

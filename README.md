@@ -7,6 +7,7 @@ A complete personal planning app for your day, week and year. It runs in any bro
 The planner starts empty, so everything in it is yours.
 
 - **My Day**: today's tasks and schedule. Type a task and press **Add**. Use the arrows to plan tomorrow or any other day.
+- **Busy and free hours**: give a task a start and end time (from 9:00 to 11:00). While you add it, “Your day” shows the busy and free hours, warns when the time clashes with something, and lets you tap a free time to use it. My Day lists today's free time too.
 - **Calendar**: month and week views. Tap a day to see or add its tasks and events.
 - **Reminders**: give a task or event a time and pick a reminder (at the start time, minutes or hours before, or 1 day before). It rings inside the app, and on your phone or computer if you turn on notifications in Settings.
 - **Tasks**: Today, Upcoming, All and Done, with search.

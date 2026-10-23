@@ -78,7 +78,7 @@
         const done = S.isDone(t, key);
         rows.push(`
           <li class="agenda-item task ${done ? 'done' : ''} ${past && !done ? 'past' : ''}" style="--c:${U.esc(cat.color)}">
-            <div class="agenda-time">${U.fmtTime(t.time)}</div>
+            <div class="agenda-time">${U.fmtTime(t.time)}${t.endTime ? `<small>${U.fmtTime(t.endTime)}</small>` : ''}</div>
             <div class="agenda-bar"></div>
             <div class="agenda-body" data-action="edit-task" data-id="${t.id}" role="button" tabindex="0">
               <strong>${U.esc(t.title)}</strong>
@@ -90,6 +90,21 @@
     });
     if (!nowPlaced) rows.push(nowLine);
     return `<ol class="agenda">${rows.join('')}</ol>`;
+  }
+
+  /* Free hours of the day; tap one to plan a task in it. */
+  function freeTime(key) {
+    if (key < U.todayKey()) return '';
+    const slots = S.freeSlots(key, null, 7 * 60, 23 * 60);
+    const range = (x) => `${U.fmtTime(U.fromMin(x.s))} – ${U.fmtTime(U.fromMin(x.e))}`;
+    return `
+      <div class="free-time">
+        <span class="dp-label free">${icon('clock', 13)} ${T('Free time')}</span>
+        ${slots.length ? slots.map((x) => `<button type="button" class="dp-chip free" data-action="new-task" data-date="${key}"
+            data-time="${U.fromMin(x.s)}" data-end="${U.fromMin(Math.min(x.e, x.s + 60))}" title="${T('Add a task at this time')}">
+            <b>${range(x)}</b> · ${U.fmtDuration((x.e - x.s) * 60000)}</button>`).join('')
+          : `<span class="muted sm">${T('No free time left on this day.')}</span>`}
+      </div>`;
   }
 
   function habits(key) {
@@ -265,6 +280,7 @@
                 <button type="button" class="btn ghost sm" data-action="new-event" data-date="${key}">${icon('plus', 14)}${T('Event')}</button>
               </div>
               ${schedule(key, isToday)}
+              ${freeTime(key)}
             </section>
             ${habits(key)}
           </div>

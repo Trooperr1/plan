@@ -1,5 +1,5 @@
 /* Service worker: offline support + notification clicks. Bump VERSION when files change. */
-const VERSION = 'planner-v6';
+const VERSION = 'planner-v7';
 const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 const ASSETS = [
   './',

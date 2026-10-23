@@ -82,6 +82,8 @@
     t.notes = str(t.notes);
     t.date = date(t.date, null);
     t.time = time(t.time, null);
+    t.endTime = t.time ? time(t.endTime, null) : null;
+    if (t.endTime && U.toMin(t.endTime) <= U.toMin(t.time)) t.endTime = null;
     t.priority = oneOf(t.priority, ['low', 'medium', 'high'], 'medium');
     t.repeat = oneOf(t.repeat, REPEAT_KEYS, 'none');
     if (t.repeat !== 'none' && !t.date) t.date = U.todayKey();
@@ -210,7 +212,7 @@
     return {
       id: U.uid(), title: '', notes: '', date: U.todayKey(), time: null, priority: 'medium',
       category: defaultCategory(), repeat: 'none', reminder: null, done: false, completedAt: null,
-      doneDates: {}, subtasks: [], goalId: null, createdAt: Date.now(), ...(p || {}),
+      endTime: null, doneDates: {}, subtasks: [], goalId: null, createdAt: Date.now(), ...(p || {}),
     };
   }
   function newEvent(p) {

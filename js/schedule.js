@@ -94,8 +94,45 @@
   function agenda(key) {
     const items = [];
     eventsOn(key).forEach((e) => items.push({ kind: 'event', item: e, start: e.allDay ? null : e.start, end: e.allDay ? null : e.end }));
-    tasksOn(key).filter((t) => t.time).forEach((t) => items.push({ kind: 'task', item: t, start: t.time, end: null }));
+    tasksOn(key).filter((t) => t.time).forEach((t) => items.push({ kind: 'task', item: t, start: t.time, end: t.endTime || null }));
     return items.sort((a, b) => (a.start || '00:00').localeCompare(b.start || '00:00') || (a.start ? 1 : -1) - (b.start ? 1 : -1));
+  }
+
+  /* A task without an end time takes 30 minutes. */
+  function taskEnd(t) {
+    return t.endTime && U.toMin(t.endTime) > U.toMin(t.time) ? t.endTime : U.fromMin(U.toMin(t.time) + 30);
+  }
+
+  /* Busy times of a day (events and timed tasks), in minutes. `skipId` leaves out the item being edited. */
+  function busy(key, skipId) {
+    const out = [];
+    eventsOn(key).forEach((e) => {
+      if (e.allDay || e.id === skipId) return;
+      out.push({ kind: 'event', item: e, title: e.title, s: U.toMin(e.start), e: Math.max(U.toMin(e.end), U.toMin(e.start) + 15) });
+    });
+    tasksOn(key).forEach((t) => {
+      if (!t.time || t.id === skipId) return;
+      out.push({ kind: 'task', item: t, title: t.title, s: U.toMin(t.time), e: U.toMin(taskEnd(t)) });
+    });
+    return out.sort((a, b) => a.s - b.s || a.e - b.e);
+  }
+
+  /* Free gaps of 15 minutes or more between `from` and `to` (minutes). On today, the past is not free. */
+  function freeSlots(key, skipId, from, to) {
+    from = from == null ? 6 * 60 : from;
+    to = to == null ? 24 * 60 : to;
+    if (key === U.todayKey()) {
+      const now = new Date();
+      from = Math.max(from, Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15);
+    }
+    const slots = [];
+    let cur = from;
+    busy(key, skipId).forEach((b) => {
+      if (b.s - cur >= 15 && b.s > cur) slots.push({ s: cur, e: Math.min(b.s, to) });
+      cur = Math.max(cur, b.e);
+    });
+    if (to - cur >= 15) slots.push({ s: cur, e: to });
+    return slots.filter((x) => x.e - x.s >= 15);
   }
 
   function dayStats(key) {
@@ -162,6 +199,7 @@
   App.sched = {
     goalProgress, goalEnd, goalDaysLeft, goalSaved,
     REPEATS, REPEAT_SHORT, REMINDERS, PRIORITIES,
+    taskEnd, busy, freeSlots,
     isRecurring, occursOn, nextOccurrence, isDone, setDone, tasksOn, eventsOn, overdue, agenda, dayStats,
     habitDone, toggleHabit, streak, bestStreak, habitRate, byTimeThenPrio,
   };

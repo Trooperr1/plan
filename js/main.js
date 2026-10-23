@@ -115,6 +115,11 @@
       const preset = {};
       if (a.dataset.date) preset.date = a.dataset.date;
       if (a.dataset.goal) preset.goalId = a.dataset.goal;
+      if (a.dataset.time) {
+        preset.time = a.dataset.time;
+        preset.endTime = a.dataset.end || null;
+        preset.reminder = App.store.state.settings.defaultReminder;
+      }
       App.forms.task(null, preset);
     },
     'edit-event'(a) { const e = App.store.find('events', a.dataset.id); if (e) App.forms.event(e); },
