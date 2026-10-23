@@ -1198,3 +1198,9 @@ output { font-weight: 700; color: var(--primary); }
 .g-bar.cut-start { border-start-start-radius: 0; border-end-start-radius: 0; border-inline-start-style: dashed; }
 .g-bar.cut-end { border-start-end-radius: 0; border-end-end-radius: 0; border-inline-end-style: dashed; }
 .g-row.achieved .g-label span { color: var(--muted); }
+
+/* ---------- Back button ---------- */
+.topbar-start { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.back-btn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.back-btn[hidden] { display: none; }
+[dir="rtl"] .back-btn .ico { transform: scaleX(-1); }

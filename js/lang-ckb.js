@@ -505,6 +505,8 @@ window.App.dictCkb = {
   'On track': 'لە ڕێگای دروستدایە',
   '{pct}% of the time has passed': '{pct}%ی کاتەکە تێپەڕیوە',
 
+  'Back': 'گەڕانەوە',
+
   // Default categories
   'Personal': 'کەسی',
   'Work': 'کار',

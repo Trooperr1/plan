@@ -248,10 +248,32 @@
     App.i18n.apply();
     renderChrome();
     updateClock();
+    // Back shows on every page except My Day itself (on My Day it returns from another date to today).
+    document.getElementById('backBtn').hidden = current === 'today' && !App.views.today.date;
   }
 
+  function goBack() {
+    if (App.ui.modalOpen) return;
+    if (current === 'today' && App.views.today.date) {
+      App.views.today.date = null;
+      render({ fresh: true });
+    } else if (trail.length) {
+      history.back();
+    } else {
+      location.hash = '#/today';
+    }
+  }
+  document.getElementById('backBtn').addEventListener('click', goBack);
+
+  /* Back button: remember the pages visited in this session. */
+  const trail = [];
   function navigate() {
-    current = routeFromHash();
+    const next = routeFromHash();
+    if (current && next !== current) {
+      if (trail.length && trail[trail.length - 1] === next) trail.pop(); // went back (our button or the phone's)
+      else trail.push(current);
+    }
+    current = next;
     render({ fresh: true });
     window.scrollTo(0, 0);
   }
