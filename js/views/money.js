@@ -7,7 +7,7 @@
   const icon = (n, s) => App.icon(n, s);
   const T = (x, v) => App.t(x, v);
 
-  const view = { title: 'Money', month: null, filter: 'all' };
+  const view = { title: 'Money', month: null, filter: 'all', reportsOpen: false };
 
   const sign = (e) => (e.type === 'in' ? '+' : '−');
 
@@ -194,12 +194,12 @@
         </div>
 
         ${summary(mk)}
-        ${budgetCard(mk)}
+        ${App.store.state.money.budget ? budgetCard(mk) : ''}
 
         <div class="today-cols">
           <section class="card">
-            <div class="card-head"><h3>${icon('grid')} ${T('Where your money goes')}</h3></div>
-            ${categories(mk)}
+            <div class="card-head"><h3>${icon('list')} ${T('Payments')}</h3>${p.filter}</div>
+            ${p.body}
           </section>
           <section class="card">
             <div class="card-head">
@@ -210,16 +210,16 @@
           </section>
         </div>
 
-        <div class="today-cols">
-          <section class="card">
-            <div class="card-head"><h3>${icon('list')} ${T('Payments')}</h3>${p.filter}</div>
-            ${p.body}
-          </section>
-          <section class="card">
-            <div class="card-head"><h3>${icon('calendar')} ${T('Last 6 months')}</h3></div>
-            ${trend(mk)}
-          </section>
-        </div>
+        <details class="card reports" ${view.reportsOpen ? 'open' : ''}>
+          <summary><h3>${icon('grid')} ${T('Reports')}</h3><span class="muted sm">${T('Where your money goes · budget · last 6 months')}</span></summary>
+          <div class="reports-body">
+            ${App.store.state.money.budget ? '' : budgetCard(mk)}
+            <div class="today-cols">
+              <section><h4 class="sub-head">${T('Where your money goes')}</h4>${categories(mk)}</section>
+              <section><h4 class="sub-head">${T('Last 6 months')}</h4>${trend(mk)}</section>
+            </div>
+          </div>
+        </details>
       </div>`;
   };
 
@@ -250,6 +250,10 @@
       case 'money-budget': App.forms.budget(); break;
       default:
     }
+  };
+
+  view.onToggle = function (e) {
+    if (e.target.matches && e.target.matches('details.reports')) view.reportsOpen = e.target.open;
   };
 
   view.onChange = function (e) {

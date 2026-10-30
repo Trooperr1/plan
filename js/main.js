@@ -6,22 +6,22 @@
   const icon = (n, s) => App.icon(n, s);
   const T = (x, v) => App.t(x, v);
 
+  // Simple menu: 4 main pages (+ Habits when turned on). Tasks and Settings open from buttons.
   const ALL_NAV = [
     ['today', 'My Day', 'sun'],
     ['calendar', 'Calendar', 'calendar'],
-    ['tasks', 'Tasks', 'list'],
     ['goals', 'Goals', 'flag'],
     ['money', 'Money', 'wallet'],
     ['habits', 'Habits', 'flame'],
-    ['settings', 'Settings', 'sliders'],
   ];
+  const EXTRA_NAV = [['tasks', 'Tasks', 'list'], ['settings', 'Settings', 'sliders']]; // computer sidebar only
   const SHORT = { today: 'Today' };
   // Habits is an optional page (Settings → Extra pages).
   const nav = () => ALL_NAV.filter(([id]) => id !== 'habits' || App.store.state.settings.showHabits);
   let current = null;
   const viewEl = document.getElementById('view');
 
-  const HIDDEN = ['review']; // pages reached from buttons, not the menu
+  const HIDDEN = ['review', 'tasks', 'settings']; // pages reached from buttons, not the phone menu
   function routeFromHash() {
     const r = location.hash.replace(/^#\/?/, '').split('/')[0];
     return nav().some(([id]) => id === r) || HIDDEN.includes(r) ? r : 'today';
@@ -192,7 +192,7 @@
   function renderChrome() {
     const st = App.store.state;
     const items = nav();
-    const links = items.map(([id, label, ic], i) => `
+    const links = [...items, ...EXTRA_NAV].map(([id, label, ic], i) => `
       <a href="#/${id}" class="nav-link ${current === id ? 'on' : ''}" ${current === id ? 'aria-current="page"' : ''} title="${T(label)} (${i + 1})">
         ${icon(ic, 19)}<span>${T(label)}</span>${id === 'tasks' ? badge() : ''}</a>`).join('');
     document.getElementById('nav').innerHTML = links;
@@ -325,6 +325,11 @@
       if (h) h(e);
     });
   });
+  // <details> open/close does not bubble; listen in the capture phase.
+  viewEl.addEventListener('toggle', (e) => {
+    const h = App.views[current].onToggle;
+    if (h) h(e);
+  }, true);
   // Keyboard activation for role="button" elements.
   viewEl.addEventListener('keydown', (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"][data-action]')) {
@@ -337,7 +342,8 @@
   document.querySelector('[data-global="new-task"]').addEventListener('click', () => {
     App.forms.task(null, current === 'today' && App.views.today.date ? { date: App.views.today.date } : current === 'calendar' ? { date: App.views.calendar.selected } : {});
   });
-  document.querySelector('[data-global="new-event"]').addEventListener('click', () => {
+  const newEventBtn = document.querySelector('[data-global="new-event"]');
+  if (newEventBtn) newEventBtn.addEventListener('click', () => {
     App.forms.event(null, current === 'today' && App.views.today.date ? { date: App.views.today.date } : current === 'calendar' ? { date: App.views.calendar.selected } : {});
   });
 
@@ -346,7 +352,7 @@
     if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || e.target.isContentEditable) return;
     const k = e.key.toLowerCase();
     if (k === 'n') { e.preventDefault(); document.querySelector('[data-global="new-task"]').click(); }
-    else if (k === 'e') { e.preventDefault(); document.querySelector('[data-global="new-event"]').click(); }
+    else if (k === 'e') { e.preventDefault(); App.forms.event(null, {}); }
     else if (/^[1-9]$/.test(k) && nav()[Number(k) - 1]) location.hash = `#/${nav()[Number(k) - 1][0]}`;
   });
 

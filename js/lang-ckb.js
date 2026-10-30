@@ -507,6 +507,11 @@ window.App.dictCkb = {
 
   'Back': 'گەڕانەوە',
 
+  'All tasks': 'هەموو ئەرکەکان',
+  'More': 'زیاتر',
+  'Reports': 'ڕاپۆرتەکان',
+  'Where your money goes · budget · last 6 months': 'پارەکەت بۆ کوێ دەچێت · بودجە · 6 مانگی ڕابردوو',
+
   // Default categories
   'Personal': 'کەسی',
   'Work': 'کار',

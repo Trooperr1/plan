@@ -145,7 +145,6 @@
           </div>
           <div class="goal-tools">
             <button type="button" class="icon-btn" data-action="edit-goal" data-id="${g.id}" aria-label="${T('Edit goal')}" title="${T('Edit goal')}">${icon('edit', 16)}</button>
-            <button type="button" class="icon-btn danger-hover" data-action="delete-goal" data-id="${g.id}" aria-label="${T('Delete')}" title="${T('Delete')}">${icon('trash', 16)}</button>
           </div>
         </div>
         <div class="goal-progress">
@@ -154,7 +153,6 @@
         </div>
         <div class="goal-sub muted sm">
           ${g.milestones.length ? `<span>${T('{done} of {total} steps done', { done: msDone, total: g.milestones.length })}</span>` : ''}
-          ${!g.achieved ? `<span>${T('{pct}% of the time has passed', { pct: Math.round(timePct) })}</span>` : ''}
           ${pace}
         </div>
         ${!g.milestones.length && !g.achieved ? `<input type="range" min="0" max="100" step="5" value="${g.progress}" data-progress="${g.id}" aria-label="${T('Progress')}: ${U.esc(g.title)}">` : ''}
@@ -168,12 +166,18 @@
           <div class="task-list">${open.map((t) => C.taskItem(t, dayOf(t), { showDate: true, hideGoal: true })).join('')}</div></div>` : ''}
         ${g.notes ? `<p class="goal-notes">${U.esc(g.notes)}</p>` : ''}
         <div class="goal-actions">
-          ${g.achieved ? '' : `<button type="button" class="btn ghost sm" data-action="goal-step" data-id="${g.id}">${icon('plus', 14)}${T('Step')}</button>
-          <button type="button" class="btn ghost sm" data-action="new-task" data-goal="${g.id}">${icon('plus', 14)}${T('Task')}</button>`}
-          <button type="button" class="btn ghost sm" data-action="goal-money" data-id="${g.id}">${icon('target', 14)}${T('Money')}</button>
-          <button type="button" class="btn ghost sm" data-action="goal-ics" data-id="${g.id}" title="${T('Add to phone calendar')}">${icon('bell', 14)}${T('Phone calendar')}</button>
+          ${g.achieved ? '' : `<button type="button" class="btn ghost sm" data-action="goal-step" data-id="${g.id}">${icon('plus', 14)}${T('Step')}</button>`}
           <button type="button" class="btn sm ${g.achieved ? 'ghost' : 'achieve'}" data-action="goal-achieve" data-id="${g.id}">
             ${g.achieved ? `${icon('repeat', 14)}${T('Not achieved yet')}` : `${icon('trophy', 14)}${T('Achieved')}`}</button>
+          <details class="goal-more">
+            <summary class="btn ghost sm">⋯ ${T('More')}</summary>
+            <div class="goal-more-body">
+              ${g.achieved ? '' : `<button type="button" class="btn ghost sm" data-action="new-task" data-goal="${g.id}">${icon('plus', 14)}${T('Task')}</button>`}
+              <button type="button" class="btn ghost sm" data-action="goal-money" data-id="${g.id}">${icon('target', 14)}${T('Money')}</button>
+              <button type="button" class="btn ghost sm" data-action="goal-ics" data-id="${g.id}">${icon('bell', 14)}${T('Phone calendar')}</button>
+              <button type="button" class="btn ghost sm danger-text" data-action="delete-goal" data-id="${g.id}">${icon('trash', 14)}${T('Delete')}</button>
+            </div>
+          </details>
         </div>
       </section>`;
   }

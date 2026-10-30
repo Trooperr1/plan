@@ -65,10 +65,8 @@
       ${s == null ? `<p class="dp-hint">${T('Pick a free time below, or type the hours above.')}</p>`
         : clash.length ? `<p class="dp-warn">${icon('alert', 15)} ${T('This time is busy: {name} ({time})', { name: U.esc(clash[0].title), time: range(clash[0].s, clash[0].e) })}${clash.length > 1 ? ` +${clash.length - 1}` : ''}</p>`
           : `<p class="dp-ok">${icon('check', 15)} ${T('This time is free')} · ${range(s, e)}</p>`}
-      ${busy.length ? `<div class="dp-row"><span class="dp-label busy">${T('Busy')}</span>
-        ${busy.map((b) => `<span class="dp-chip busy" style="--c:${U.esc(App.store.category(b.item.category).color)}"><b>${range(b.s, b.e)}</b> ${U.esc(b.title)}</span>`).join('')}</div>` : ''}
       <div class="dp-row"><span class="dp-label free">${T('Free')}</span>
-        ${free.length ? free.map((x) => `<button type="button" class="dp-chip free" data-s="${x.s}" data-e="${x.e}"><b>${range(x.s, x.e)}</b> · ${U.fmtDuration((x.e - x.s) * 60000)}</button>`).join('')
+        ${free.length ? free.slice(0, 4).map((x) => `<button type="button" class="dp-chip free" data-s="${x.s}" data-e="${x.e}"><b>${range(x.s, x.e)}</b> · ${U.fmtDuration((x.e - x.s) * 60000)}</button>`).join('')
           : `<span class="muted sm">${T('No free time left on this day.')}</span>`}</div>
       ${!busy.length ? `<p class="dp-ok">🎉 ${T('Your whole day is free')}</p>` : ''}`;
     box.querySelectorAll('.dp-chip.free').forEach((btn) => btn.addEventListener('click', () => {
@@ -83,7 +81,7 @@
   function durRow() {
     return `<div class="dur-row"><span class="dp-label">${T('How long?')}</span>
       ${DURATIONS.map((d) => `<button type="button" class="dur-chip" data-dur="${d}">${U.fmtDuration(d * 60000)}</button>`).join('')}
-      <button type="button" class="dur-chip first" data-first>${icon('zap', 13)}${T('First free time')}</button></div>`;
+      </div>`;
   }
   function wireDur(el, read, apply, skipId) {
     const row = el.querySelector('.dur-row');
@@ -179,15 +177,13 @@
           </div>
           ${durRow()}
           <div class="day-plan" data-dayplan></div>
-          <div class="row-2">
-            <label class="field"><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(t.reminder)}</select></label>
-            <label class="field"><span>${T('Repeat')}</span><select name="repeat">${repeatOptions(t.repeat)}</select></label>
-          </div>
+          <label class="field"><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(t.reminder)}</select></label>
           <p class="hint" data-reminder-hint hidden>${icon('alert', 13)} ${T('Pick a date and time so the reminder knows when to ring.')}</p>
-          ${goalPicker(t.goalId)}
-          <details class="more" ${!isNew && (t.subtasks.length || t.notes || t.priority !== 'medium') ? 'open' : ''}>
+          <details class="more" ${!isNew && (t.subtasks.length || t.notes || t.priority !== 'medium' || S.isRecurring(t) || t.goalId) ? 'open' : ''}>
             <summary>${T('More options')}</summary>
             <div class="more-body">
+              <label class="field"><span>${T('Repeat')}</span><select name="repeat">${repeatOptions(t.repeat)}</select></label>
+              ${goalPicker(t.goalId)}
               <div class="field"><span>${T('Priority')}</span>
                 <div class="segmented" role="radiogroup">
                   ${['low', 'medium', 'high'].map((p) => `
@@ -200,10 +196,10 @@
                 <button type="button" class="btn ghost sm add-row" data-add-sub>${icon('plus', 14)}${T('Add step')}</button>
               </div>
               <label class="field"><span>${T('Notes')}</span><textarea name="notes" rows="3" placeholder="${T('Details…')}">${esc(t.notes)}</textarea></label>
+              ${phoneButton()}
+              ${!isNew ? `<button type="button" class="btn ghost phone-cal" data-copy>${icon('repeat', 16)}${T('Copy to tomorrow')}</button>` : ''}
             </div>
           </details>
-          ${phoneButton()}
-          ${!isNew ? `<button type="button" class="btn ghost phone-cal" data-copy>${icon('repeat', 16)}${T('Copy to tomorrow')}</button>` : ''}
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {
@@ -330,21 +326,19 @@
           </div>
           ${durRow()}
           <div class="day-plan" data-dayplan></div>
-          <div class="row-2">
-            <label class="field" data-reminder><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(ev.reminder)}</select></label>
-            <label class="field"><span>${T('Repeat')}</span><select name="repeat">${repeatOptions(ev.repeat)}</select></label>
-          </div>
-          <details class="more" ${!isNew && (ev.allDay || ev.location || ev.notes) ? 'open' : ''}>
+          <label class="field" data-reminder><span>${T('Reminder')}</span><select name="reminder">${reminderOptions(ev.reminder)}</select></label>
+          <details class="more" ${!isNew && (ev.allDay || ev.location || ev.notes || S.isRecurring(ev)) ? 'open' : ''}>
             <summary>${T('More options')}</summary>
             <div class="more-body">
+              <label class="field"><span>${T('Repeat')}</span><select name="repeat">${repeatOptions(ev.repeat)}</select></label>
               <label class="field switch-field"><span>${T('All day')}</span>
                 <span class="switch"><input type="checkbox" name="allDay" ${ev.allDay ? 'checked' : ''}><i></i></span></label>
               <label class="field"><span>${T('Category')}</span><select name="category">${catOptions(ev.category)}</select></label>
               <label class="field"><span>${T('Location')}</span><input type="text" name="location" value="${esc(ev.location)}" placeholder="${T('Where?')}" autocomplete="off"></label>
               <label class="field"><span>${T('Notes')}</span><textarea name="notes" rows="3" placeholder="${T('Details…')}">${esc(ev.notes)}</textarea></label>
+              ${phoneButton()}
             </div>
           </details>
-          ${phoneButton()}
         </form>`,
       footer: footer(id, isNew),
       onMount(el) {

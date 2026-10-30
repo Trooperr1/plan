@@ -125,7 +125,7 @@
     return `
       <div class="free-time">
         <span class="dp-label free">${icon('clock', 13)} ${T('Free time')}</span>
-        ${slots.length ? slots.map((x) => `<button type="button" class="dp-chip free" data-action="new-task" data-date="${key}"
+        ${slots.length ? slots.slice(0, 3).map((x) => `<button type="button" class="dp-chip free" data-action="new-task" data-date="${key}"
             data-time="${U.fromMin(x.s)}" data-end="${U.fromMin(Math.min(x.e, x.s + 60))}" title="${T('Add a task at this time')}">
             <b>${range(x)}</b> · ${U.fmtDuration((x.e - x.s) * 60000)}</button>`).join('')
           : `<span class="muted sm">${T('No free time left on this day.')}</span>`}
@@ -237,31 +237,7 @@
           </div>
         </div>`);
     }
-    return out.join('');
-  }
-
-  /* The goals today's work leads to. */
-  function workingTowards(tasks) {
-    const st = App.store.state;
-    const today = U.todayKey();
-    const linked = new Set(tasks.map((t) => t.goalId).filter(Boolean));
-    const goals = st.goals
-      .filter((g) => !g.achieved && S.goalProgress(g) < 100 && S.goalEnd(g) >= today && S.goalStart(g) <= today)
-      .sort((a, b) => (linked.has(b.id) - linked.has(a.id)) || S.goalEnd(a).localeCompare(S.goalEnd(b)))
-      .slice(0, 3);
-    if (!goals.length) return '';
-    return `
-      <section class="towards">
-        <span class="towards-label">${icon('flag', 14)} ${T('Working towards')}</span>
-        <div class="towards-list">${goals.map((g) => {
-          const c = App.store.category(g.category).color;
-          const p = S.goalProgress(g);
-          return `<button type="button" class="towards-goal" style="--c:${U.esc(c)}" data-action="open-goal">
-            <strong>${U.esc(g.title)}</strong>
-            <span class="bar"><span style="width:${p}%"></span></span>
-            <small>${p}% · ${T('{n} days left', { n: S.goalDaysLeft(g) })}</small></button>`;
-        }).join('')}</div>
-      </section>`;
+    return out[0] || ''; // one message at a time keeps the page calm
   }
 
   view.render = function () {
@@ -272,7 +248,6 @@
     const tasks = S.tasksOn(key);
     const late = isToday ? S.overdue(today) : [];
     const done = tasks.filter((t) => S.isDone(t, key)).length;
-    const pct = tasks.length ? (done / tasks.length) * 100 : 0;
     const name = st.settings.name ? `, ${U.esc(st.settings.name)}` : '';
     const heading = isToday ? `${U.greeting()}${name}` : U.relDay(key);
 
@@ -289,22 +264,19 @@
               <button type="button" class="btn ghost sm" data-action="day-today" ${isToday ? 'disabled' : ''}>${T('Today')}</button>
               <button type="button" class="icon-btn" data-action="day-next" aria-label="${T('Next day')}">${icon('right')}</button>
               <label class="date-jump" title="${T('Pick a date')}">${icon('calendar', 16)}<input type="date" id="dayJump" value="${key}" aria-label="${T('Pick a date')}"></label>
-              <a class="btn ghost sm review-link" href="#/review">${icon('star', 14)}${T('Week review')}</a>
             </div>
             <h2>${heading}</h2>
             <p class="muted">${U.fmtDate(key, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
             ${isToday ? nowNext() : ''}
           </div>
-          ${tasks.length ? `<div class="hero-stats">${C.progressRing(pct, 88, T('{done} of {total}', { done, total: tasks.length }))}</div>` : ''}
         </section>
 
         ${banners(key, isToday, tasks)}
-        ${workingTowards(tasks)}
 
         <div class="today-cols">
           <div class="col">
             <section class="card">
-              <div class="card-head"><h3>${icon('list')} ${T('Tasks')}</h3></div>
+              <div class="card-head"><h3>${icon('list')} ${T('Tasks')}${tasks.length ? ` <span class="count-pill ${done === tasks.length ? 'all-done' : ''}">${done}/${tasks.length}</span>` : ''}</h3><a class="btn ghost sm" href="#/tasks">${T('All tasks')}</a></div>
               ${late.length ? `
                 <div class="group-label danger">${icon('alert', 14)} ${T('Overdue')} <span>${late.length}</span>
                   <button type="button" class="btn ghost sm label-btn" data-action="move-overdue">${T('Move all to today')}</button></div>
